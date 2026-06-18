@@ -1,0 +1,6 @@
+{
+  "name": "FIFA World Cup Stock Shares",
+  "description": "The world's premier football share marketplace. Invest in national football teams participating in the World Cup. Hold your shares until the champion is crowned and win big if they lift the trophy!",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
