@@ -68,9 +68,9 @@ export default function UserDashboard({
               <Trophy className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-xs text-amber-400 font-semibold uppercase tracking-widest font-mono">SECURE TRADING NODE • ACTIVE SESSION</span>
+              <span className="text-xs text-amber-400 font-semibold uppercase tracking-widest font-mono">SECURE SERVICE • ACTIVE PORTAL</span>
               <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight font-display">Welcome, {currentUser?.displayName || 'Investor'}</h2>
-              <p className="text-xs text-gray-400 mt-1">{currentUser?.email || 'authenticated.escrow.user'}</p>
+              <p className="text-xs text-gray-400 mt-1">{currentUser?.email || 'authenticated.portfolio.user'}</p>
             </div>
           </div>
 
@@ -80,7 +80,7 @@ export default function UserDashboard({
                 onClick={onLogOut}
                 className="px-5 py-3 bg-[#1e141a]/95 hover:bg-[#2b101d] text-red-400 border border-red-950/60 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer hover:border-red-500/40"
               >
-                Sign Out / Disconnect Ledger
+                Sign Out
               </button>
             )}
           </div>
@@ -98,7 +98,7 @@ export default function UserDashboard({
               ${calculatePortfolioValue().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-[10px] text-gray-500 mt-2 font-semibold">
-              Calculated on holdings value (${totalHoldingStockValueOnly().toFixed(2)}) + ledger balance
+              Calculated on holdings value (${totalHoldingStockValueOnly().toFixed(2)}) + cash balance
             </p>
           </div>
 
@@ -111,20 +111,20 @@ export default function UserDashboard({
               {totalSharesOwned.toLocaleString(undefined, { maximumFractionDigits: 4 })}
             </div>
             <p className="text-[10px] text-gray-500 mt-2 font-semibold">
-              Held across <span className="text-blue-400 font-bold">{distinctCountriesCount}</span> distinct country nodes
+              Held across <span className="text-blue-400 font-bold">{distinctCountriesCount}</span> countries
             </p>
           </div>
 
           <div className="bg-[#10131c] p-5 rounded-xl border border-[#202737] shadow-lg">
             <div className="flex justify-between items-start mb-3">
-              <span className="text-xs uppercase font-bold tracking-widest text-[#8a91a1]">Potential Settlement Payload</span>
+              <span className="text-xs uppercase font-bold tracking-widest text-[#8a91a1]">Potential Settlement Value</span>
               <Trophy className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-3xl font-black font-mono text-emerald-400 tracking-tight">
               ${totalPotentialWinningSettleValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-[10px] text-gray-500 mt-2 font-semibold">
-              Gross payout settled automatically if your teams win the trophy
+              Gross payout settled automatically if your teams win the tournament
             </p>
           </div>
 
@@ -134,10 +134,10 @@ export default function UserDashboard({
               <ShieldCheck className="w-4 h-4 text-emerald-500" />
             </div>
             <div className="p-1 px-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold uppercase rounded-lg inline-block my-1 tracking-wider">
-              Ledger Node Secured
+              Connection Secured
             </div>
             <p className="text-[10px] text-gray-500 mt-2.5 font-semibold">
-              Direct Checkout escrow and two-factor code authentication is active
+              Secure payment checkout and automated transactions are verified active
             </p>
           </div>
 
@@ -307,12 +307,12 @@ export default function UserDashboard({
               
               <div className="px-6 py-4 border-b border-[#202737] bg-[#141824]/40 flex items-center space-x-2">
                 <History className="w-4 h-4 text-blue-400" />
-                <h3 className="font-extrabold text-white text-sm font-display uppercase tracking-wider">Ledger Transaction Audits</h3>
+                <h3 className="font-extrabold text-white text-sm font-display uppercase tracking-wider">Transaction History Audits</h3>
               </div>
 
               {transactions.length === 0 ? (
                 <div className="p-8 text-center text-gray-500 text-xs">
-                  No active transaction logs verified in this session ledger.
+                  No active transaction logs found in your session.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -406,13 +406,13 @@ export default function UserDashboard({
                   <ShieldCheck className="w-6 h-6" />
                 </div>
               </div>
-              <h4 className="font-bold text-white text-sm font-display">Secured Clearing Node</h4>
+              <h4 className="font-bold text-white text-sm font-display">Secured Clearing System</h4>
               <p className="text-xs text-gray-400 leading-relaxed px-1">
-                Your investment is secured by smart contracts on our high-performance isolated ledger. 
-                All transaction paths are audited in compliance with World Escrow rules.
+                Your investment and transactions are fully protected. 
+                All transaction paths are audited in compliance with World Escrow and tournament rules.
               </p>
               <div className="text-[10px] uppercase font-mono tracking-wider font-bold bg-[#141822] py-2 rounded text-blue-400 border border-[#242b3c]">
-                SECURE SHARES PROTOCOL v2.4
+                SECURE SHARES COMPLIANCE
               </div>
             </div>
 

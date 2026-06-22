@@ -6,13 +6,41 @@ interface TournamentCenterProps {
   fixtures: MatchFixture[];
   countries: CountryShare[];
   holdings?: ShareHolding[];
-  onTriggerSimulation?: (fixtureId: string, homeScore: number, awayScore: number) => void;
+  initialTab?: 'fixtures' | 'groups' | 'knockout';
+  lastSyncTime?: string | null;
+  lastResponseTime?: number | null;
+  numTeamsLoaded?: number;
+  numFixturesLoaded?: number;
+  numStandingsLoaded?: number;
+  apiSuccessCount?: number;
+  apiFailedCount?: number;
+  apiLoading?: boolean;
+  apiError?: string | null;
+  onManualTriggerSync?: () => void;
 }
 
-export default function TournamentCenter({ fixtures, countries, holdings = [], onTriggerSimulation }: TournamentCenterProps) {
-  const [activeTab, setActiveTab] = useState<'fixtures' | 'groups' | 'knockout'>('fixtures');
+export default function TournamentCenter({ 
+  fixtures, 
+  countries, 
+  holdings = [], 
+  initialTab = 'fixtures',
+  lastSyncTime = null,
+  lastResponseTime = null,
+  numTeamsLoaded = 0,
+  numFixturesLoaded = 0,
+  numStandingsLoaded = 0,
+  apiSuccessCount = 1,
+  apiFailedCount = 0,
+  apiLoading = false,
+  apiError = null,
+  onManualTriggerSync
+}: TournamentCenterProps) {
+  const [activeTab, setActiveTab] = useState<'fixtures' | 'groups' | 'knockout'>(initialTab);
   const [matchFilter, setMatchFilter] = useState<'all' | 'live' | 'upcoming' | 'completed'>('all');
-  const [simulationFixtureId, setSimulationFixtureId] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
   
   // Starred country state inside Tournament Center for additional custom support bookmarks
   const [starredIds, setStarredIds] = useState<string[]>(() => {
@@ -35,10 +63,6 @@ export default function TournamentCenter({ fixtures, countries, holdings = [], o
     return hasHolding || starredIds.includes(countryId);
   };
   
-  // Scoring state
-  const [simHomeScore, setSimHomeScore] = useState('2');
-  const [simAwayScore, setSimAwayScore] = useState('1');
-
   // Find country objects
   const getCountry = (teamId: string) => {
     return countries.find((c) => c.id === teamId);
@@ -59,16 +83,6 @@ export default function TournamentCenter({ fixtures, countries, holdings = [], o
         if (b.gd !== a.gd) return b.gd - a.gd;
         return b.ranking - a.ranking;
       });
-  };
-
-  const handleSimSubmit = (e: React.FormEvent, fixtureId: string) => {
-    e.preventDefault();
-    if (onTriggerSimulation) {
-      const hScore = parseInt(simHomeScore) || 0;
-      const aScore = parseInt(simAwayScore) || 0;
-      onTriggerSimulation(fixtureId, hScore, aScore);
-      setSimulationFixtureId(null);
-    }
   };
 
   const uniqueGroups: ('A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H')[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -120,6 +134,82 @@ export default function TournamentCenter({ fixtures, countries, holdings = [], o
             >
               Bracket Progress
             </button>
+          </div>
+        </div>
+
+        {/* ==================== API HEALTH AND VERIFICATION SYSTEM ==================== */}
+        <div id="live-api-diagnostics-deck" className="bg-[#10131c]/95 border border-[#21293c] hover:border-[#d4af37]/45 rounded-2xl p-5 sm:p-6 shadow-xl space-y-5 transition-all select-none">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3.5 border-b border-[#212739] gap-3">
+            <div>
+              <span className="text-[10px] text-amber-500 font-extrabold tracking-widest uppercase font-mono block">LIVE API DATA AUDITING & VERIFICATION</span>
+              <h3 className="text-base sm:text-lg font-bold font-display text-white">FIFA Live Feed Telemetry Diagnostics</h3>
+            </div>
+            <button
+              onClick={onManualTriggerSync}
+              disabled={apiLoading}
+              className={`px-5 py-2.5 bg-[#171d2b] hover:bg-[#20293d] disabled:opacity-50 border border-[#d4af37]/35 rounded-xl text-xs text-[#d4af37] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${apiLoading ? 'animate-pulse' : ''}`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${apiLoading ? 'animate-spin' : ''}`} />
+              <span>{apiLoading ? 'Syncing Feeds...' : 'Force Sync Live APINode'}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+            
+            <div className="bg-[#0b0e14] p-4 rounded-xl border border-[#1e2536] flex flex-col justify-between">
+              <span className="text-[10px] uppercase font-bold text-gray-400 font-sans tracking-wide">Live Feed Status</span>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${apiError ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${apiError ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
+                </span>
+                <span className={`text-sm font-extrabold uppercase font-mono tracking-wider ${apiError ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {apiLoading ? 'POLLING...' : apiError ? 'API ERROR' : 'OPERATIONAL'}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 font-sans mt-1.5 leading-tight">FIFA football-data.org rest-proxy</p>
+            </div>
+
+            <div className="bg-[#0b0e14] p-4 rounded-xl border border-[#1e2536] flex flex-col justify-between">
+              <span className="text-[10px] uppercase font-bold text-gray-400 font-sans tracking-wide">Last Connection Status</span>
+              <div className="mt-2 text-sm font-black text-white font-mono tracking-wide">
+                HTTP {apiError ? '502 Bad Gateway' : '200 OK'}
+              </div>
+              <p className="text-[10px] text-gray-500 font-sans mt-1.5 leading-tight">Latest network response header</p>
+            </div>
+
+            <div className="bg-[#0b0e14] p-4 rounded-xl border border-[#1e2536] flex flex-col justify-between">
+              <span className="text-[10px] uppercase font-bold text-gray-400 font-sans tracking-wide">Last Dynamic Refresh</span>
+              <div className="mt-2 text-xs font-extrabold text-[#d4af37] font-mono truncate">
+                {lastSyncTime ? lastSyncTime : 'Pending initial sync'}
+              </div>
+              <p className="text-[10px] text-gray-500 font-sans mt-1.5 leading-tight">Synced in: {lastResponseTime !== null ? `${lastResponseTime} ms` : 'N/A'}</p>
+            </div>
+
+            <div className="bg-[#0b0e14] p-4 rounded-xl border border-[#1e2536] flex flex-col justify-between">
+              <span className="text-[10px] uppercase font-bold text-gray-400 font-sans tracking-wide">Total API Network Requests</span>
+              <div className="mt-2 flex gap-4 text-xs font-extrabold font-mono font-sans font-bold">
+                <div className="text-emerald-400">OK: {apiSuccessCount}</div>
+                <div className="text-red-400">ERR: {apiFailedCount}</div>
+              </div>
+              <p className="text-[10px] text-gray-500 font-sans mt-1.5 leading-tight">Sessions persistent counters</p>
+            </div>
+
+          </div>
+
+          <div className="bg-[#0b0e14]/55 p-4 rounded-xl border border-[#1e2536] grid grid-cols-3 gap-2 text-center select-none font-mono">
+            <div>
+              <span className="block text-[9px] uppercase tracking-widest text-gray-500 font-extrabold">Teams Loaded</span>
+              <span className="block text-xl font-black text-white mt-0.5">{numTeamsLoaded}</span>
+            </div>
+            <div className="border-x border-[#212739]">
+              <span className="block text-[9px] uppercase tracking-widest text-gray-500 font-extrabold">Matches Synced</span>
+              <span className="block text-xl font-black text-white mt-0.5">{numFixturesLoaded}</span>
+            </div>
+            <div>
+              <span className="block text-[9px] uppercase tracking-widest text-gray-500 font-extrabold">Standings Loaded</span>
+              <span className="block text-xl font-black text-white mt-0.5">{numStandingsLoaded}</span>
+            </div>
           </div>
         </div>
 
@@ -403,71 +493,6 @@ export default function TournamentCenter({ fixtures, countries, holdings = [], o
                             <span className="text-[10px] text-gray-500 font-semibold font-mono">${away.currentPrice.toFixed(2)}</span>
                           </div>
                         </div>
-
-                        {/* Settle option inside card if function present */}
-                        {onTriggerSimulation && !isFinished && (
-                          <div className="mt-4 pt-3.5 border-t border-[#1d2335] text-center">
-                            {simulationFixtureId === fixture.id ? (
-                              <form 
-                                onSubmit={(e) => handleSimSubmit(e, fixture.id)}
-                                className="bg-[#171c2a] p-3 rounded-lg border border-[#222a3d] space-y-3"
-                              >
-                                <p className="text-[10px] text-amber-400 uppercase font-bold tracking-widest leading-none font-mono">
-                                  Official score sheet:
-                                </p>
-                                <div className="flex items-center justify-center space-x-2 text-xs font-mono">
-                                  <span className="text-[#a0afca] uppercase">{home.id}</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={simHomeScore}
-                                    onChange={(e) => setSimHomeScore(e.target.value)}
-                                    className="w-10 bg-black border border-[#2b354e] rounded text-center text-white"
-                                  />
-                                  <span className="text-gray-500">:</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={simAwayScore}
-                                    onChange={(e) => setSimAwayScore(e.target.value)}
-                                    className="w-10 bg-black border border-[#2b354e] rounded text-center text-white"
-                                  />
-                                  <span className="text-[#a0afca] uppercase">{away.id}</span>
-                                </div>
-                                <div className="flex space-x-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSimulationFixtureId(null)}
-                                    className="w-1/2 py-1 bg-gray-800 text-white text-[10px] font-bold rounded cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    type="submit"
-                                    className="w-1/2 py-1 bg-gradient-to-r from-[#d4af37] to-amber-500 text-black text-[10px] font-black rounded cursor-pointer"
-                                  >
-                                    Submit result
-                                  </button>
-                                </div>
-                              </form>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setSimulationFixtureId(fixture.id);
-                                  setSimHomeScore('2');
-                                  setSimAwayScore('1');
-                                }}
-                                className="w-full py-1.5 bg-[#1a2031] hover:bg-[#d4af37]/15 hover:text-[#d4af37] border border-[#27304b] rounded text-[10px] text-gray-400 font-extrabold uppercase tracking-widest flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                              >
-                                <PlayCircle className="w-3.5 h-3.5" />
-                                <span>Settle match outcome</span>
-                              </button>
-                            )}
-                            <p className="text-[9px] text-gray-600 mt-2 font-mono leading-none">
-                              *Wins alter dynamic pricing index (+/- 25% value)
-                            </p>
-                          </div>
-                        )}
 
                       </div>
                     );

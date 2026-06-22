@@ -12,6 +12,14 @@ interface AdminPanelProps {
   onTriggerNotification: (title: string, message: string, type: 'success' | 'info' | 'warning' | 'alert') => void;
   onSettleFullTournamentMatch: (fixtureId: string, homeScore: number, awayScore: number) => void;
   onOverrideCountry?: (countryId: string, updatedFields: Partial<CountryShare>) => void;
+  apiLoading?: boolean;
+  apiError?: string | null;
+  lastSyncTime?: string | null;
+  lastResponseTime?: number | null;
+  numTeamsLoaded?: number;
+  numFixturesLoaded?: number;
+  numStandingsLoaded?: number;
+  onManualTriggerSync?: () => Promise<void>;
 }
 
 export default function AdminPanel({
@@ -23,7 +31,15 @@ export default function AdminPanel({
   onRemoveCountry,
   onTriggerNotification,
   onSettleFullTournamentMatch,
-  onOverrideCountry
+  onOverrideCountry,
+  apiLoading = false,
+  apiError = null,
+  lastSyncTime = null,
+  lastResponseTime = null,
+  numTeamsLoaded = 0,
+  numFixturesLoaded = 0,
+  numStandingsLoaded = 0,
+  onManualTriggerSync
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'countries' | 'news' | 'matches' | 'api'>('countries');
 
@@ -702,45 +718,71 @@ export default function AdminPanel({
                   </div>
 
                   {/* API connection metrics overview */}
-                  <div className="bg-[#171d2b]/60 p-4 rounded-lg border border-[#232b3d]/50 space-y-2.5 font-mono text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Connection Status:</span>
-                      <strong className={`font-bold ${apiKey ? 'text-emerald-400' : 'text-amber-500'}`}>{apiConnectionStatus}</strong>
+                  <div className="bg-[#171d2b]/65 p-4 rounded-lg border border-[#232b3d]/50 space-y-3 font-mono text-xs">
+                    <div className="flex justify-between items-center pb-1 border-b border-[#212c40]/30 font-sans">
+                      <span className="text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Real API Diagnostics</span>
+                      <span className="text-red-400 font-bold text-[10px]">FOOTBALL-DATA.ORG</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">API Endpoint Ping:</span>
-                      <strong className="text-gray-300">{apiKey ? '14 ms (MetLife Node)' : '⏤'}</strong>
+                      <span className="text-gray-400">API Status:</span>
+                      <strong className={`font-black uppercase ${!apiError && lastSyncTime ? 'text-emerald-400' : 'text-amber-500'}`}>
+                        {!apiError && lastSyncTime ? 'CONNECTED' : (apiError ? 'DISCONNECTED' : 'STANDBY')}
+                      </strong>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Monthly Tier Limit:</span>
-                      <strong className="text-gray-300 font-bold">100,000 / 100,000 reqs</strong>
+                      <span className="text-gray-400">Last Successful Sync Time:</span>
+                      <strong className="text-gray-200">{lastSyncTime || 'Pending First Sync'}</strong>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Auto-Update Daemon:</span>
-                      <strong className="text-emerald-400">ONLINE (Every 2m)</strong>
+                      <span className="text-gray-400">Last API Response Time:</span>
+                      <strong className="text-gray-200">{lastResponseTime !== null ? `${lastResponseTime} ms` : '⏤'}</strong>
                     </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Number of Teams Loaded:</span>
+                      <strong className="text-emerald-400 font-bold">{numTeamsLoaded} / 32</strong>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Number of Fixtures Loaded:</span>
+                      <strong className="text-[#d4af37] font-bold">{numFixturesLoaded}</strong>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Number of Standings Loaded:</span>
+                      <strong className="text-blue-400 font-bold">{numStandingsLoaded}</strong>
+                    </div>
+                    {apiError && (
+                      <div className="text-[10px] text-red-400 p-2 bg-red-950/25 border border-red-900/45 rounded font-sans">
+                        <strong>API Node Error:</strong> {apiError}
+                      </div>
+                    )}
                   </div>
 
                   {/* Trigger Sync button */}
                   <button
-                    onClick={() => {
+                    disabled={apiLoading}
+                    onClick={async () => {
                       setIsSyncing(true);
-                      setTimeout(() => {
-                        setIsSyncing(false);
-                        alert(`[Football API Node Synchronization] Direct contact with ${apiProvider} established. Verified 32 qualified country nodes and standings. Dynamic stats populated to local cache memory successfully.`);
+                      try {
+                        if (onManualTriggerSync) {
+                          await onManualTriggerSync();
+                        }
+                        alert(`[Football API Node Force Sync] Dynamic data successfully requested and processed. Cache memory populated successfully.`);
                         if (onTriggerNotification) {
                           onTriggerNotification(
-                            `Sports API synchronized!`,
-                            `Successfully contacted ${apiProvider} server. Standing and country matrices verified 100% accurate.`,
+                            `Sports API Sync Completed!`,
+                            `Successfully contact and parsed team, standing & schedule payloads from Football-Data.org.`,
                             'success'
                           );
                         }
-                      }, 1500);
+                      } catch (err: any) {
+                        alert(`[Football API Sync Failed] Error contact provider: ${err.message}`);
+                      } finally {
+                        setIsSyncing(false);
+                      }
                     }}
-                    className="w-full py-2.5 bg-gradient-to-r from-red-600 to-rose-600 font-bold uppercase rounded text-xs text-white flex items-center justify-center space-x-1.5 hover:brightness-110 cursor-pointer shadow-lg active:scale-98 transition-all"
+                    className={`w-full py-2.5 bg-gradient-to-r from-red-600 to-rose-600 font-bold uppercase rounded text-xs text-white flex items-center justify-center space-x-1.5 hover:brightness-110 cursor-pointer shadow-lg active:scale-98 transition-all ${apiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span>{isSyncing ? 'Synchronizing API Feeds...' : 'Force Manual API Synch'}</span>
+                    <RefreshCw className={`w-4 h-4 ${(isSyncing || apiLoading) ? 'animate-spin' : ''}`} />
+                    <span>{(isSyncing || apiLoading) ? 'Synchronizing API Feeds...' : 'Force Manual API Sync'}</span>
                   </button>
 
                 </div>

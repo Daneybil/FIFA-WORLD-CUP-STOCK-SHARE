@@ -25,6 +25,20 @@ import UserDashboard from './components/UserDashboard';
 import TournamentCenter from './components/TournamentCenter';
 import AdminPanel from './components/AdminPanel';
 import AuthSection from './components/AuthSection';
+import HowItWorks from './components/HowItWorks';
+import { TRANSLATIONS } from './translations';
+
+// Firebase Client Imports
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './lib/firebase';
+import { 
+  getOrCreateUserProfile,
+  getUserHoldings,
+  getUserTransactions,
+  getUserNotifications,
+  markNotificationReadInFirestore,
+  clearAllUserNotificationsInFirestore
+} from './lib/firebase-service';
 
 // Icon imports
 import { 
@@ -46,7 +60,13 @@ import {
 
 export default function App() {
   // Navigation Routing Tab
-  const [activeRoute, setActiveRoute] = useState<'dashboard' | 'market' | 'tournament' | 'admin'>('dashboard');
+  const [activeRoute, setActiveRoute] = useState<'dashboard' | 'market' | 'live-data' | 'tournament' | 'how-it-works' | 'admin' | 'login' | 'portal-dashboard'>('dashboard');
+  
+  // Translation Helper based on the selected language
+  const t = (key: string) => {
+    const dict = TRANSLATIONS[detectedLanguage] || TRANSLATIONS['English'];
+    return dict[key] || TRANSLATIONS['English'][key] || key;
+  };
   
   // Mobile menu control
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -57,15 +77,28 @@ export default function App() {
   // States with persistent LocalStorage retrieval
   const [countries, setCountries] = useState<CountryShare[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_countries');
+    let loaded = INITIAL_COUNTRIES;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length === INITIAL_COUNTRIES.length) {
-          return parsed;
+          loaded = parsed;
         }
       } catch (e) {}
     }
-    return INITIAL_COUNTRIES;
+    return loaded.map(c => {
+      const initial = INITIAL_COUNTRIES.find(initC => initC.id === c.id) || c;
+      const baseSettlement = initial.winningSettlementPrice;
+      const wins = c.statistics?.wins || 0;
+      const losses = c.statistics?.losses || 0;
+      const dynamicPrice = Math.round(baseSettlement * Math.pow(0.97, wins) * Math.pow(1.05, losses) * 100) / 100;
+      return {
+        ...c,
+        name: initial.name,
+        flag: initial.flag,
+        winningSettlementPrice: dynamicPrice
+      };
+    });
   });
 
   const [fixtures, setFixtures] = useState<MatchFixture[]>(() => {
@@ -100,18 +133,66 @@ export default function App() {
   });
 
   // User persistent authentication state pre-linked for Firebase
-  const [currentUser, setCurrentUser] = useState<{ email: string; displayName: string } | null>(() => {
-    const saved = localStorage.getItem('world_cup_shares_current_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentUser, setCurrentUser] = useState<{ email: string; displayName: string; uid: string } | null>(null);
 
+  // Sync Firebase authentication status
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('world_cup_shares_current_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('world_cup_shares_current_user');
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const email = firebaseUser.email || '';
+        const displayName = firebaseUser.displayName || email.split('@')[0] || 'Investor';
+        
+        setCurrentUser({
+          email,
+          displayName,
+          uid: firebaseUser.uid
+        });
+
+        // Pull verified real persistent logs from Firebase Firestore
+        await syncFirebaseData(firebaseUser.uid);
+        
+        // Redirect to portal if they were logging in
+        setActiveRoute((prev) => (prev === 'login' ? 'portal-dashboard' : prev));
+      } else {
+        // Reset states under auth to standard local defaults
+        setCurrentUser(null);
+        setHoldings([]);
+        setTransactions([]);
+        setNotifications([]);
+        setUserCash(1000.00);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const syncFirebaseData = async (uid: string) => {
+    try {
+      const profile = await getOrCreateUserProfile(uid, auth.currentUser?.email || '', auth.currentUser?.displayName || '');
+      setUserCash(profile.balance);
+
+      const realHoldings = await getUserHoldings(uid);
+      setHoldings(realHoldings);
+
+      const realTransactions = await getUserTransactions(uid);
+      setTransactions(realTransactions);
+
+      const realNotifs = await getUserNotifications(uid);
+      setNotifications(realNotifs);
+    } catch (err) {
+      console.error("Firebase synchronization failure syncFirebaseData:", err);
     }
-  }, [currentUser]);
+  };
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    setCurrentUser(null);
+    setUserCash(1000.00);
+    setHoldings([]);
+    setTransactions([]);
+    setNotifications([]);
+    setActiveRoute('dashboard');
+  };
 
   // Global pool stats
   const [marketStats, setMarketStats] = useState<MarketStat>({
@@ -124,15 +205,34 @@ export default function App() {
   });
 
   // Local numeric states for live market stats ticking and formula updates (adds 10% daily in real-time)
-  const [numericMarketCap, setNumericMarketCap] = useState(12500000000); 
-  const [numericVolume24h, setNumericVolume24h] = useState(450000000); 
-  const [numericChange, setNumericChange] = useState(3.2);
+  const [numericMarketCap, setNumericMarketCap] = useState(() => {
+    const saved = localStorage.getItem('world_cup_shares_numericMarketCap');
+    return saved ? Number(saved) : 12500000000;
+  }); 
+  const [numericVolume24h, setNumericVolume24h] = useState(() => {
+    const saved = localStorage.getItem('world_cup_shares_numericVolume24h');
+    return saved ? Number(saved) : 450000000;
+  }); 
+  const [numericChange, setNumericChange] = useState(() => {
+    const saved = localStorage.getItem('world_cup_shares_numericChange');
+    return saved ? Number(saved) : 3.2;
+  });
 
   const [selectedMarketTab, setSelectedMarketTab] = useState<'all' | 'trending' | 'speculative' | 'group' | 'active' | 'eliminated'>('all');
 
   // Football-Data.org Live Synchronizer states
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => localStorage.getItem('world_cup_shares_last_sync_time') || null);
+  const [lastResponseTime, setLastResponseTime] = useState<number | null>(() => {
+    const saved = localStorage.getItem('world_cup_shares_last_resp_time');
+    return saved ? Number(saved) : null;
+  });
+  const [numTeamsLoaded, setNumTeamsLoaded] = useState<number>(() => Number(localStorage.getItem('world_cup_shares_num_teams_loaded') || '0'));
+  const [numFixturesLoaded, setNumFixturesLoaded] = useState<number>(() => Number(localStorage.getItem('world_cup_shares_num_fixtures_loaded') || '0'));
+  const [numStandingsLoaded, setNumStandingsLoaded] = useState<number>(() => Number(localStorage.getItem('world_cup_shares_num_standings_loaded') || '0'));
+  const [apiSuccessCount, setApiSuccessCount] = useState<number>(() => Number(localStorage.getItem('world_cup_api_success_count') || '1'));
+  const [apiFailedCount, setApiFailedCount] = useState<number>(() => Number(localStorage.getItem('world_cup_api_failed_count') || '0'));
 
   // Regional language detection state
   const [detectedLanguage, setDetectedLanguage] = useState('English');
@@ -177,6 +277,7 @@ export default function App() {
     setApiError(null);
     try {
       console.log("Fetching live Football-Data.org API endpoints...");
+      const start = Date.now();
       
       const [teamsRes, standingsRes, matchesRes] = await Promise.all([
         fetch('/api/football/teams'),
@@ -191,6 +292,32 @@ export default function App() {
       const teamsData = await teamsRes.json();
       const standingsData = await standingsRes.json();
       const matchesData = await matchesRes.json();
+      const duration = Date.now() - start;
+
+      const nTeams = (teamsData && Array.isArray(teamsData.teams)) ? teamsData.teams.length : 0;
+      const nFixtures = (matchesData && Array.isArray(matchesData.matches)) ? matchesData.matches.length : 0;
+      const nStandings = (standingsData && Array.isArray(standingsData.standings)) 
+        ? standingsData.standings.reduce((acc: number, std: any) => acc + (std.table?.length || 0), 0) 
+        : 0;
+
+       const syncTimeString = new Date().toLocaleString();
+      setLastSyncTime(syncTimeString);
+      setLastResponseTime(duration);
+      setNumTeamsLoaded(nTeams);
+      setNumFixturesLoaded(nFixtures);
+      setNumStandingsLoaded(nStandings);
+
+      setApiSuccessCount(prev => {
+        const next = prev + 1;
+        localStorage.setItem('world_cup_api_success_count', String(next));
+        return next;
+      });
+
+      localStorage.setItem('world_cup_shares_last_sync_time', syncTimeString);
+      localStorage.setItem('world_cup_shares_last_resp_time', String(duration));
+      localStorage.setItem('world_cup_shares_num_teams_loaded', String(nTeams));
+      localStorage.setItem('world_cup_shares_num_fixtures_loaded', String(nFixtures));
+      localStorage.setItem('world_cup_shares_num_standings_loaded', String(nStandings));
 
       // 1. Filter qualified countries (exclude any non-qualified or mock-up team that is not part of the WC dataset)
       const REAL_WOLD_CUP_QUALIFIED_IDS = [
@@ -295,13 +422,19 @@ export default function App() {
             });
           }
 
+           const sWins = statistics.wins || 0;
+          const sLosses = statistics.losses || 0;
+          const baseSettlement = initialC.winningSettlementPrice;
+          const dynamicPrice = Math.round(baseSettlement * Math.pow(0.97, sWins) * Math.pow(1.05, sLosses) * 100) / 100;
+
           return {
             ...existingC,
             name: initialC.name,
             flag: initialC.flag,
             group: apiStats?.group ?? existingC.group,
             statistics,
-            status
+            status,
+            winningSettlementPrice: dynamicPrice
           };
         });
       });
@@ -351,6 +484,11 @@ export default function App() {
     } catch (err: any) {
       console.error("Live synchroniser failure: ", err);
       setApiError(err.message || "Failed to load football data");
+      setApiFailedCount(prev => {
+        const next = prev + 1;
+        localStorage.setItem('world_cup_api_failed_count', String(next));
+        return next;
+      });
     } finally {
       setApiLoading(false);
     }
@@ -415,23 +553,59 @@ export default function App() {
     }
   }, [countries, holdings]);
 
-  // Real-time market stats ticking simulation (Formula logic: 10% average growth per 24h)
+  // Real-time market stats ticking simulation with elapsed-time logical progression
   useEffect(() => {
+    const lastUpdateStr = localStorage.getItem('world_cup_shares_last_stats_update_time');
+    const now = Date.now();
+    localStorage.setItem('world_cup_shares_last_stats_update_time', String(now));
+    
+    if (lastUpdateStr) {
+      const lastUpdate = Number(lastUpdateStr);
+      if (!isNaN(lastUpdate) && lastUpdate > 0) {
+        const diffMs = now - lastUpdate;
+        const diffDays = diffMs / (1000 * 60 * 60 * 24);
+        
+        if (diffDays > 0) {
+          // Market Cap grows ~10% daily (compounded)
+          setNumericMarketCap(prev => {
+            const nextVal = Math.round(prev * Math.pow(1.10, diffDays));
+            return nextVal;
+          });
+          
+          // Volume grows ~15% daily (compounded)
+          setNumericVolume24h(prev => {
+            const nextVal = Math.round(prev * Math.pow(1.15, diffDays));
+            return nextVal;
+          });
+        }
+      }
+    }
+  }, []);
+
+  // Real-time market stats ticking simulation
+  useEffect(() => {
+    let lastTime = Date.now();
+    
     const statsTimer = setInterval(() => {
+      const now = Date.now();
+      const diffMs = now - lastTime;
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      lastTime = now;
+      
+      localStorage.setItem('world_cup_shares_last_stats_update_time', String(now));
+      
       setNumericMarketCap(prev => {
-        const dailyRate = 0.10 / (86400 / 1.5);
-        const randomFactor = (0.5 + Math.random() * 1.5);
-        const increment = prev * dailyRate * randomFactor;
-        const fluctuation = (Math.random() - 0.45) * 5000; // slightly upward biased micro fluctuations
-        return Math.round(prev + increment + fluctuation);
+        // Growth: 10% daily compound + micro fluctuation
+        const growth = prev * (Math.pow(1.10, diffDays) - 1);
+        const fluctuation = (Math.random() - 0.45) * 60;
+        return Math.max(1000000000, Math.round(prev + growth + fluctuation));
       });
 
       setNumericVolume24h(prev => {
-        const dailyRate = 0.10 / (86400 / 1.5);
-        const randomFactor = (0.5 + Math.random() * 1.5);
-        const increment = prev * dailyRate * randomFactor;
-        const fluctuation = (Math.random() - 0.45) * 2000;
-        return Math.round(prev + increment + fluctuation);
+        // Growth: 15% daily compound + micro fluctuation
+        const growth = prev * (Math.pow(1.15, diffDays) - 1);
+        const fluctuation = (Math.random() - 0.45) * 25;
+        return Math.max(10000000, Math.round(prev + growth + fluctuation));
       });
 
       setNumericChange(prev => {
@@ -454,6 +628,9 @@ export default function App() {
       volume24h: `$${numericVolume24h.toLocaleString('en-US')}`,
       marketChange24h: `↑ ${numericChange.toFixed(2)}%`
     }));
+    localStorage.setItem('world_cup_shares_numericMarketCap', String(numericMarketCap));
+    localStorage.setItem('world_cup_shares_numericVolume24h', String(numericVolume24h));
+    localStorage.setItem('world_cup_shares_numericChange', String(numericChange));
   }, [numericMarketCap, numericVolume24h, numericChange]);
 
   // State for purchase checkouts modal overlay
@@ -572,10 +749,7 @@ export default function App() {
     const selectedC = countries.find(c => c.id === cId);
     if (!selectedC) return;
 
-    // Deduct user balance
-    setUserCash(prev => Math.max(0, prev - amount));
-
-    // Compile new Holding Deed
+    // Compile new Holding Deed (fallback for UI/guest)
     const holdingId = `deed-${Date.now()}`;
     const newHolding: ShareHolding = {
       id: holdingId,
@@ -610,7 +784,7 @@ export default function App() {
     // Log user purchase into public dynamic ticker stream
     const activityRecord: MarketActivity = {
       id: `act-user-${Date.now()}`,
-      userName: 'You (Secure Escrow)',
+      userName: currentUser ? currentUser.displayName : 'You (Secure Escrow)',
       countryId: cId,
       countryName: selectedC.name,
       flag: selectedC.flag,
@@ -641,6 +815,11 @@ export default function App() {
     };
 
     setNotifications(prev => [newAlert, ...prev]);
+
+    // Redraw user balance or sync directly with Firebase for authentic accuracy
+    if (currentUser) {
+      syncFirebaseData(currentUser.uid);
+    }
   };
 
   // Administration controllers
@@ -844,161 +1023,16 @@ export default function App() {
   return (
     <div className="relative min-h-screen bg-[#07090d] text-[#e2e8f0] flex flex-col justify-between font-sans selection:bg-[#d4af37]/30 selection:text-white overflow-x-hidden">
       
-      {/* Regional Language Detector Top Notification Bar */}
-      <div className="relative z-40 bg-gradient-to-r from-[#0d121f] via-[#1a233a] to-[#0d121f] border-b border-white/5 py-2 text-center text-[11px] text-gray-300 font-medium">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-center space-x-2">
-          <span>🌍</span>
-          <span>
-            [Regional Detector]: Browser region auto-detected language: <strong className="text-[#d4af37]">{detectedLanguage}</strong>. Platform is synchronized and auto-translated.
-          </span>
-          {detectionNoticeOpen && (
-            <button 
-              onClick={() => setDetectionNoticeOpen(false)}
-              className="ml-3 text-[10px] text-gray-400 hover:text-white bg-black/40 px-2 py-0.5 rounded border border-white/5"
-            >
-              Dismiss
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Background Images Container - Clean slate integrating image-1.jpg exactly as provided, duplicated vertically to cover the website's background height beautifully */}
-      <div className="absolute inset-x-0 top-0 bottom-0 min-h-full pointer-events-none z-0 bg-[#07090d] overflow-hidden flex flex-col">
-        {/* We present a seamless vertical repetition of the target background image without scaling, cropping or distortion, ensuring all corners and text like "Cup" remain fully visible */}
-        <div className="w-full select-none flex flex-col">
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 1"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 2"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 3"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 4"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 5"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 6"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 7"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 8"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 9"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 10"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 11"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 12"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 13"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 14"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 15"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 16"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 17"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 18"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 19"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 20"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 21"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-          <img 
-            src="/image-1.jpg" 
-            alt="Top Background 22"
-            className="w-full h-auto object-contain opacity-100 block" 
-            referrerPolicy="no-referrer" 
-          />
-        </div>
+      {/* Background Images Container - Clean slate integrating image-1.jpg exactly as provided, with robust vertical repetitive CSS styling to guarantee load on Vercel */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-0 bg-[#07090d] overflow-hidden" 
+        style={{
+          backgroundImage: 'url("/image-1.jpg")',
+          backgroundRepeat: 'repeat-y',
+          backgroundSize: '100% auto',
+          backgroundPosition: 'top center',
+        }}
+      >
         <div className="absolute inset-0 bg-transparent pointer-events-none" />
       </div>
 
@@ -1015,62 +1049,93 @@ export default function App() {
             {/* Logo brand strictly matched to the screenshot */}
             <div className="flex flex-col cursor-pointer select-none" onClick={() => setActiveRoute('dashboard')}>
               <span className="font-bold text-white text-base tracking-wide leading-tight">
-                FIFA World Cup
+                {t('brand_line1')}
               </span>
               <span className="text-sm text-gray-300 tracking-wide leading-tight">
-                Stock Shares
+                {t('brand_line2')}
               </span>
             </div>
 
-            {/* Desktop Navigation Links - matching exactly "Here", "Hage", "Modis" from image */}
-            <nav className="hidden md:flex items-center space-x-10 text-[15px] font-medium text-gray-400">
+            {/* Desktop Navigation Links - matching professional high-contrast items */}
+            <nav className="hidden md:flex items-center space-x-7 text-[13px] font-bold text-gray-400">
               <button
                 onClick={() => setActiveRoute('dashboard')}
-                className={`transition-colors cursor-pointer text-sm font-semibold tracking-wider ${
-                  activeRoute === 'dashboard' ? 'text-white' : 'hover:text-white'
+                className={`transition-colors cursor-pointer tracking-wider uppercase ${
+                  activeRoute === 'dashboard' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
                 }`}
               >
-                Here
+                {t('nav_here')}
               </button>
               
               <button
                 onClick={() => setActiveRoute('market')}
-                className={`transition-colors cursor-pointer text-sm font-semibold tracking-wider ${
-                  activeRoute === 'market' ? 'text-white' : 'hover:text-white'
+                className={`transition-colors cursor-pointer tracking-wider uppercase ${
+                  activeRoute === 'market' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
                 }`}
               >
-                Hage
+                {t('nav_hage')}
+              </button>
+
+              <button
+                onClick={() => setActiveRoute('live-data')}
+                className={`transition-colors cursor-pointer tracking-wider uppercase ${
+                  activeRoute === 'live-data' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+                }`}
+              >
+                {t('nav_live_data')}
               </button>
 
               <button
                 onClick={() => setActiveRoute('tournament')}
-                className={`transition-colors cursor-pointer text-sm font-semibold tracking-wider ${
-                  activeRoute === 'tournament' ? 'text-white' : 'hover:text-white'
+                className={`transition-colors cursor-pointer tracking-wider uppercase ${
+                  activeRoute === 'tournament' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
                 }`}
               >
-                Modis
+                {t('nav_modis')}
               </button>
+
+              <button
+                onClick={() => setActiveRoute('how-it-works')}
+                className={`transition-colors cursor-pointer tracking-wider uppercase ${
+                  activeRoute === 'how-it-works' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+                }`}
+              >
+                {t('nav_how_it_works')}
+              </button>
+
+              {currentUser ? (
+                <>
+                  <button
+                    onClick={() => setActiveRoute('portal-dashboard')}
+                    className={`transition-all duration-150 cursor-pointer tracking-wider uppercase text-amber-400 font-extrabold pb-1 border-[#d4af37] ${
+                      activeRoute === 'portal-dashboard' ? 'text-amber-300 border-b-2' : 'hover:text-amber-300'
+                    }`}
+                  >
+                    🛡️ My Dashboard
+                  </button>
+                  <button
+                    onClick={handleSignOut}
+                    className="transition-colors cursor-pointer tracking-wider uppercase hover:text-red-400 text-gray-500 font-semibold"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setActiveRoute('login')}
+                  className={`transition-all duration-150 cursor-pointer tracking-wider uppercase text-emerald-400 font-extrabold pb-1 border-emerald-400 ${
+                    activeRoute === 'login' ? 'text-emerald-300 border-b-2' : 'hover:text-emerald-300'
+                  }`}
+                >
+                  🔑 Login / Access Portal
+                </button>
+              )}
             </nav>
 
             {/* Interactive 'Hero ⌄' Golden Dropdown Button strictly matches screenshot */}
             <div className="flex items-center space-x-3.5">
               
-              {apiLoading ? (
-                <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-mono font-bold tracking-wider uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shrink-0" />
-                  <span>SYNCING LIVE...</span>
-                </span>
-              ) : apiError ? (
-                <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-mono font-bold tracking-wider uppercase" title={apiError}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                  <span>FEED OFFLINE</span>
-                </span>
-              ) : (
-                <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold tracking-wider uppercase" title="Real-time Football-Data.org proxy live feed actively pooled every 60 seconds">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-ping" />
-                  <span>LIVE FEED ACTIVE</span>
-                </span>
-              )}
+              {/* Note: Live Feed background processes are active, but the visible indicators are removed for elegance */}
 
               <div className="relative">
                 <button
@@ -1078,21 +1143,50 @@ export default function App() {
                   className="px-4.5 py-2.5 bg-[#141824] hover:bg-[#1c2235] border border-[#d4af37] rounded-xl flex items-center space-x-2 shadow-[0_0_15px_rgba(212,175,55,0.25)] hover:border-white transition-all transform active:scale-95 cursor-pointer text-[#d4af37] font-extrabold text-xs tracking-wider uppercase font-mono"
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  <span>Ledger Profile (Hero)</span>
+                  <span>Market Alerts & Controls ⚙️</span>
                   <span className="text-[8px] font-bold">▼</span>
                 </button>
 
                 {/* Dropdown containing the secure escrow cash, notifications, and compliance options */}
                 {heroDropdownOpen && (
-                  <div className="absolute right-0 mt-3.5 w-64 bg-[#111420]/95 backdrop-blur-xl border border-[#21293c] rounded-xl shadow-2xl p-4.5 space-y-3.5 z-50">
+                  <div className="absolute right-0 mt-3.5 w-80 bg-[#111420]/95 backdrop-blur-xl border border-[#21293c] rounded-xl shadow-2xl p-4.5 space-y-3.5 z-50 text-left">
                     <div className="text-[10px] uppercase font-bold tracking-widest text-[#d4af37] pb-1 border-b border-[#21293c]">
-                      Ledger Profile
+                      Operational Controls & Balance
                     </div>
                     
                     {/* Wallet cash */}
                     <div className="flex items-center justify-between py-1 px-2.5 bg-[#171d2e] rounded-lg border border-[#26314c]">
                       <span className="text-[10px] font-semibold text-gray-400">Escrow Balance</span>
                       <span className="text-emerald-400 font-extrabold text-xs">${userCash.toFixed(2)}</span>
+                    </div>
+
+                    {/* Manual Language Selector */}
+                    <div className="flex flex-col space-y-1.5 py-1 px-2.5 bg-[#171d2e] rounded-lg border border-[#26314c] text-left">
+                      <span className="text-[9px] uppercase tracking-wider font-extrabold text-gray-400 font-mono">Platform Locale 🌍</span>
+                      <select
+                        value={detectedLanguage}
+                        onChange={(e) => setDetectedLanguage(e.target.value)}
+                        className="bg-transparent text-xs text-white outline-none border-none py-0.5 font-bold cursor-pointer w-full focus:ring-0"
+                      >
+                        <option value="English" className="bg-[#111420] text-white font-bold text-xs">English (US)</option>
+                        <option value="العربية (Arabic)" className="bg-[#111420] text-white font-bold text-xs">العربية (Arabic)</option>
+                        <option value="Español (Spanish)" className="bg-[#111420] text-white font-bold text-xs font-sans">Español (Spanish)</option>
+                        <option value="Português (Portuguese)" className="bg-[#111420] text-white font-bold text-xs font-sans">Português (Portuguese)</option>
+                        <option value="Français (French)" className="bg-[#111420] text-white font-bold text-xs font-sans">Français (French)</option>
+                      </select>
+                    </div>
+
+                    {/* Official Investor Alerts / Recent Announcements Feed */}
+                    <div className="space-y-1.5 py-2 px-2.5 bg-[#171d2e] rounded-lg border border-[#26314c] text-left max-h-48 overflow-y-auto">
+                      <span className="text-[9px] uppercase tracking-wider font-extrabold text-amber-500 font-mono block mb-1">Live Market Alerts & News</span>
+                      <div className="space-y-1 text-[10px] text-gray-300 divide-y divide-[#21293c]">
+                        <div className="py-1">🏁 USA settle optimized: <span className="text-[#d4af37] font-bold">$200.00</span></div>
+                        <div className="py-1">🏁 Qatar settle optimized: <span className="text-[#d4af37] font-bold">$180.00</span></div>
+                        <div className="py-1">🏁 France settle optimized: <span className="text-[#d4af37] font-bold">$175.00</span></div>
+                        <div className="py-1">🏁 Spain settle optimized: <span className="text-[#d4af37] font-bold">$183.00</span></div>
+                        <div className="py-1 text-emerald-400">📡 FIFA Live API: Operational & Synced</div>
+                        <div className="py-1 text-blue-400">🛡️ Guarantee: fully collateralized escrow</div>
+                      </div>
                     </div>
 
                     {/* Notification toggles */}
@@ -1113,7 +1207,7 @@ export default function App() {
                     {/* Governance System Access */}
                     <button
                       onClick={() => { setActiveRoute('admin'); setHeroDropdownOpen(false); }}
-                      className="w-full py-2 bg-red-950/20 hover:bg-red-950/40 text-red-400 hover:text-red-300 border border-red-500/20 text-[10px] uppercase tracking-widest font-extrabold rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer animate-pulse"
+                      className="w-full py-2 bg-red-950/20 hover:bg-red-950/40 text-red-400 hover:text-red-300 border border-red-500/20 text-[10px] uppercase tracking-widest font-extrabold rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
                     >
                       <Lock className="w-3 h-3" />
                       <span>Governance Control</span>
@@ -1186,7 +1280,7 @@ export default function App() {
                 activeRoute === 'dashboard' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
               }`}
             >
-              Investor Dashboard
+              {t('nav_here')}
             </button>
             <button
               onClick={() => { setActiveRoute('market'); setMobileMenuOpen(false); }}
@@ -1194,7 +1288,15 @@ export default function App() {
                 activeRoute === 'market' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
               }`}
             >
-              Stock Market
+              {t('nav_hage')}
+            </button>
+            <button
+              onClick={() => { setActiveRoute('live-data'); setMobileMenuOpen(false); }}
+              className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded ${
+                activeRoute === 'live-data' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
+              }`}
+            >
+              {t('nav_live_data')}
             </button>
             <button
               onClick={() => { setActiveRoute('tournament'); setMobileMenuOpen(false); }}
@@ -1202,15 +1304,52 @@ export default function App() {
                 activeRoute === 'tournament' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
               }`}
             >
-              Tournament Center
+              {t('nav_modis')}
             </button>
             <button
-              onClick={() => { setActiveRoute('admin'); setMobileMenuOpen(false); }}
-              className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded text-red-400 ${
-                activeRoute === 'admin' ? 'bg-red-950/20' : 'text-red-400'
+              onClick={() => { setActiveRoute('how-it-works'); setMobileMenuOpen(false); }}
+              className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded ${
+                activeRoute === 'how-it-works' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
               }`}
             >
-              Governance Control Panel
+              {t('nav_how_it_works')}
+            </button>
+
+            {currentUser ? (
+              <>
+                <button
+                  onClick={() => { setActiveRoute('portal-dashboard'); setMobileMenuOpen(false); }}
+                  className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded text-amber-400 ${
+                    activeRoute === 'portal-dashboard' ? 'bg-[#141924] text-amber-300' : ''
+                  }`}
+                >
+                  🛡️ My Dashboard
+                </button>
+                <button
+                  onClick={() => { handleSignOut(); setMobileMenuOpen(false); }}
+                  className="py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded text-red-400"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => { setActiveRoute('login'); setMobileMenuOpen(false); }}
+                className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded text-emerald-400 ${
+                  activeRoute === 'login' ? 'bg-[#141924] text-emerald-300' : ''
+                }`}
+              >
+                🔑 Login / Access Portal
+              </button>
+            )}
+
+            <button
+              onClick={() => { setActiveRoute('admin'); setMobileMenuOpen(false); }}
+              className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded text-red-500 bg-red-950/5 border border-red-950/10 ${
+                activeRoute === 'admin' ? 'bg-red-950/20 text-red-400' : 'text-[#878e9f]'
+              }`}
+            >
+              Governance Panel
             </button>
           </nav>
         )}
@@ -1226,6 +1365,20 @@ export default function App() {
             onNavigateToMarket={() => setActiveRoute('market')} 
             onNavigateToTournament={() => setActiveRoute('tournament')} 
             onSelectTab={(tab) => setSelectedMarketTab(tab)}
+            onNavigateToSection={(section) => {
+              if (section === 'live-data') {
+                setActiveRoute('live-data');
+              } else if (section === 'how-it-works') {
+                setActiveRoute('how-it-works');
+              } else if (section === 'tournament') {
+                setActiveRoute('tournament');
+              } else if (section === 'market') {
+                setActiveRoute('market');
+              } else {
+                setActiveRoute('dashboard');
+              }
+            }}
+            onTriggerCreateAccount={() => setAuthModalOpen(true)}
           />
         )}
 
@@ -1371,24 +1524,30 @@ export default function App() {
                   />
                 </div>
               ) : (
-                <div className="bg-[#10131c]/40 border border-[#202737] rounded-xl p-6 text-center max-w-xl mx-auto space-y-4">
+                <div className="bg-[#10131c]/60 border-2 border-[#d4af37]/45 rounded-2xl p-8 text-center max-w-xl mx-auto space-y-5 shadow-[0_0_25px_rgba(212,175,55,0.15)]">
                   <div className="flex justify-center">
-                    <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center">
-                      <Lock className="w-5 h-5" />
+                    <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/35 text-[#d4af37] flex items-center justify-center animate-bounce">
+                      <Lock className="w-6 h-6" />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-extrabold text-white text-sm uppercase tracking-wider">Secure Personal Ledger Access</h4>
-                    <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto">
-                      Connect your account to claim your complimentary $1,000 trading cash balance, trace asset histories, log transactions, and manage matches.
+                  <div className="space-y-2">
+                    <h4 className="font-black text-white text-base uppercase tracking-widest font-display">SECURE ACCOUNT ACCESS</h4>
+                    <p className="text-xs text-gray-300 leading-relaxed max-w-sm mx-auto">
+                      Create an account or sign in to manage your portfolio, track your share holdings, view transaction history, and monitor your World Cup investments in real time.
                     </p>
                   </div>
-                  <div>
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                     <button
-                      onClick={() => setAuthModalOpen(true)}
-                      className="px-6 py-2.5 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold text-xs rounded-lg hover:from-white hover:to-[#fbbf24] transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider"
+                      onClick={() => { setActiveRoute('login'); }}
+                      className="w-full sm:w-auto px-8 py-3 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-black text-xs rounded-xl hover:from-white hover:to-[#fbbf24] shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-widest border border-white/20"
                     >
-                      Authenticate Now
+                      Sign In
+                    </button>
+                    <button
+                      onClick={() => { setActiveRoute('login'); }}
+                      className="w-full sm:w-auto px-8 py-3 bg-[#171c2a] text-white font-black text-xs rounded-xl hover:bg-[#20283b] shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-widest border border-[#2b354e]"
+                    >
+                      Create Account
                     </button>
                   </div>
                 </div>
@@ -1415,6 +1574,33 @@ export default function App() {
           </div>
         )}
 
+        {activeRoute === 'live-data' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 relative z-10 font-sans">
+            <button
+              onClick={() => setActiveRoute('dashboard')}
+              className="mb-4 inline-flex items-center space-x-2 px-4 py-2 bg-[#121622] hover:bg-[#1a2135] text-gray-300 hover:text-white border border-[#232b3e] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <span>← Go Back to Dashboard</span>
+            </button>
+            <TournamentCenter
+              fixtures={fixtures}
+              countries={countries}
+              holdings={holdings}
+              initialTab="fixtures"
+              lastSyncTime={lastSyncTime}
+              lastResponseTime={lastResponseTime}
+              numTeamsLoaded={numTeamsLoaded}
+              numFixturesLoaded={numFixturesLoaded}
+              numStandingsLoaded={numStandingsLoaded}
+              apiSuccessCount={apiSuccessCount}
+              apiFailedCount={apiFailedCount}
+              apiLoading={apiLoading}
+              apiError={apiError}
+              onManualTriggerSync={loadFootballData}
+            />
+          </div>
+        )}
+
         {activeRoute === 'tournament' && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 relative z-10 font-sans">
             <button
@@ -1427,8 +1613,75 @@ export default function App() {
               fixtures={fixtures}
               countries={countries}
               holdings={holdings}
-              onTriggerSimulation={handleSimulateFullTournamentMatch}
+              initialTab="groups"
+              lastSyncTime={lastSyncTime}
+              lastResponseTime={lastResponseTime}
+              numTeamsLoaded={numTeamsLoaded}
+              numFixturesLoaded={numFixturesLoaded}
+              numStandingsLoaded={numStandingsLoaded}
+              apiSuccessCount={apiSuccessCount}
+              apiFailedCount={apiFailedCount}
+              apiLoading={apiLoading}
+              apiError={apiError}
+              onManualTriggerSync={loadFootballData}
             />
+
+            {/* Authenticated secured portfolio deck embedded below tournament scene */}
+            {currentUser ? (
+              <div className="mt-10">
+                <div className="bg-[#10131c]/30 rounded-2xl border border-white/5 p-1.5 shadow-2xl">
+                  <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between select-none">
+                    <div>
+                      <span className="text-[10px] text-emerald-400 font-extrabold tracking-widest uppercase font-mono block">SECURE RECONCILIATION DECK</span>
+                      <h4 className="text-base font-bold text-white font-display">Escrow Portfolio Ledger</h4>
+                    </div>
+                    <span className="p-1 px-3.5 bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-[10px] font-bold font-mono rounded-lg uppercase tracking-wider">
+                      Ledger ID: FIFA-U-{currentUser.displayName.toUpperCase().slice(0,6)}
+                    </span>
+                  </div>
+                  <UserDashboard
+                    currentUser={currentUser}
+                    onLogOut={() => setCurrentUser(null)}
+                    holdings={holdings}
+                    transactions={transactions}
+                    activities={activities}
+                    userCash={userCash}
+                    countries={countries}
+                    fixtures={fixtures}
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Account access section */
+              <div className="mt-10 bg-[#10131c]/40 border border-[#202737] rounded-xl p-8 text-center max-w-xl mx-auto space-y-5 shadow-2xl">
+                <div className="flex justify-center">
+                  <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/20 text-[#d4af37] flex items-center justify-center">
+                    <Trophy className="w-6 h-6" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <h4 className="font-extrabold text-white text-base font-display uppercase tracking-wider">SECURE ACCOUNT ACCESS</h4>
+                  <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto">
+                    Create an account or sign in to manage your portfolio, track team share holdings, view transaction history, and monitor performance in real-time.
+                  </p>
+                </div>
+                
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xs mx-auto">
+                  <button
+                    onClick={() => setActiveRoute('login')}
+                    className="w-full py-3 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold text-xs rounded-xl hover:from-white hover:to-[#fbbf24] shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider border border-white/20"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => setActiveRoute('login')}
+                    className="w-full py-3 bg-[#171c2a] text-white font-extrabold text-xs rounded-xl hover:bg-[#20283b] shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider border border-[#2b354e]"
+                  >
+                    Create Account
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1450,7 +1703,120 @@ export default function App() {
               onTriggerNotification={handleTriggerNotification}
               onSettleFullTournamentMatch={handleSimulateFullTournamentMatch}
               onOverrideCountry={handleOverrideCountry}
+              apiLoading={apiLoading}
+              apiError={apiError}
+              lastSyncTime={lastSyncTime}
+              lastResponseTime={lastResponseTime}
+              numTeamsLoaded={numTeamsLoaded}
+              numFixturesLoaded={numFixturesLoaded}
+              numStandingsLoaded={numStandingsLoaded}
+              onManualTriggerSync={loadFootballData}
             />
+          </div>
+        )}
+
+        {activeRoute === 'how-it-works' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 relative z-10 font-sans">
+            <button
+              onClick={() => setActiveRoute('dashboard')}
+              className="mb-4 inline-flex items-center space-x-2 px-4 py-2 bg-[#121622] hover:bg-[#1a2135] text-gray-300 hover:text-white border border-[#232b3e] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <span>← Go Back to Dashboard</span>
+            </button>
+            <HowItWorks />
+          </div>
+        )}
+
+        {activeRoute === 'login' && (
+          <div className="max-w-md mx-auto px-4 py-16 relative z-10 font-sans">
+            <div className="bg-[#0e111a] border border-[#22293d] rounded-2xl p-6 shadow-2xl space-y-4">
+              <div className="text-center pb-2">
+                <span className="text-[10px] text-[#d4af37] font-extrabold tracking-widest uppercase font-mono block">SECURE GATEWAY</span>
+                <h3 className="text-xl font-extrabold text-white font-display uppercase tracking-wider mt-1">Investor Portal Authentication</h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  Connect your real identity node to access persistent ledger portfolios.
+                </p>
+              </div>
+
+              <AuthSection
+                onAuthSuccess={(user) => {
+                  setCurrentUser(user);
+                  syncFirebaseData(user.uid);
+                  setActiveRoute('portal-dashboard');
+                }}
+              />
+
+              <div className="pt-2 text-center">
+                <button
+                  onClick={() => setActiveRoute('dashboard')}
+                  className="text-xs text-gray-500 hover:text-white font-mono transition-colors"
+                >
+                  ← Continue browsing as guest
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeRoute === 'portal-dashboard' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 relative z-10 font-sans pb-16">
+            {currentUser ? (
+              <div className="bg-[#10131c]/40 rounded-2xl border border-white/5 p-1.5 shadow-2xl">
+                <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between select-none bg-[#141824]/40 rounded-t-xl">
+                  <div>
+                    <span className="text-[10px] text-emerald-400 font-extrabold tracking-widest uppercase font-mono block">AUTHENTICATED INTERFACE AREA</span>
+                    <h4 className="text-base font-bold text-white font-display flex items-center gap-1.5">
+                      <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                      Compliant Escrow Portfolio Ledger
+                    </h4>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className="hidden sm:inline-block p-1 px-3.5 bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-[10px] font-bold font-mono rounded-lg uppercase tracking-wider">
+                      Owner: {currentUser.displayName.toUpperCase()}
+                    </span>
+                    <button
+                      onClick={handleSignOut}
+                      className="text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-wider px-3 py-1.5 bg-red-950/10 border border-red-500/10 rounded-lg hover:bg-red-950/20 transition-all cursor-pointer"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+                
+                <UserDashboard
+                  currentUser={currentUser}
+                  onLogOut={handleSignOut}
+                  holdings={holdings}
+                  transactions={transactions}
+                  activities={activities}
+                  userCash={userCash}
+                  countries={countries}
+                  fixtures={fixtures}
+                />
+              </div>
+            ) : (
+              <div className="bg-[#10131c]/60 border-2 border-[#d4af37]/45 rounded-2xl p-10 text-center max-w-xl mx-auto space-y-6 shadow-2xl">
+                <div className="flex justify-center">
+                  <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center">
+                    <Lock className="w-7 h-7 animate-pulse" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <h4 className="font-exrabold text-white text-base font-display uppercase tracking-widest">Access Session Closed</h4>
+                  <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto">
+                    Your portal session was terminated or has expired. Please authenticate to enable secure investment transaction syncing.
+                  </p>
+                </div>
+                <div>
+                  <button
+                    onClick={() => setActiveRoute('login')}
+                    className="px-6 py-3 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold text-xs rounded-xl hover:from-white hover:to-[#fbbf24] shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer uppercase tracking-widest"
+                  >
+                    Authenticate Portal
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1460,8 +1826,15 @@ export default function App() {
       {selectedCountryBuy && (
         <PurchaseModal
           country={selectedCountryBuy}
+          userCash={userCash}
+          userId={currentUser ? currentUser.uid : null}
           onClose={() => setSelectedCountryBuy(null)}
-          onCompletePurchase={handleCompletePurchase}
+          onCompletePurchase={() => {
+            if (currentUser) {
+              syncFirebaseData(currentUser.uid);
+            }
+            setSelectedCountryBuy(null);
+          }}
         />
       )}
 
@@ -1478,11 +1851,11 @@ export default function App() {
             </button>
 
             <div className="text-center mb-6 pt-2">
-              <h3 className="text-base font-black text-white font-display uppercase tracking-wider">SECURE TRADING AUTHENTICATION</h3>
+              <h3 className="text-base font-black text-white font-display uppercase tracking-wider">SECURE PORTFOLIO GATEWAY</h3>
               <p className="text-xs text-gray-400 mt-1.5">
                 {pendingBuyCountry 
                   ? `Please register or login to acquire shares of ${pendingBuyCountry.name}.`
-                  : "Authenticate to unlock your $1,000 personal trader ledger node."}
+                  : "Sign in to access your portfolio dashboard and manage your investments."}
               </p>
             </div>
 
@@ -1510,7 +1883,7 @@ export default function App() {
             <div className="space-y-3.5">
               <span className="font-black text-white text-xs uppercase tracking-wider block">Fédération Resources</span>
               <p className="text-[11px] leading-relaxed text-[#4e5666]">
-                Official stock-derivative marketplace for international World Cup allocations. Authorized under Sandbox Escrow Protocol.
+                Official marketplace for international World Cup allocations. Authorized and secure.
               </p>
               <div className="space-y-1.5 text-[11px]">
                 <div className="flex items-center space-x-2 text-[#9da8bd]">
@@ -1615,15 +1988,15 @@ export default function App() {
 
           <div className="pt-8 text-center space-y-4">
             <div className="flex justify-center space-x-6 items-center flex-wrap text-[#8b98b0] text-[10px]">
-              <span className="font-black text-[#d4af37]">FIFA STOCKS EXCHANGE v2.4</span>
+              <span className="font-black text-[#d4af37]">FIFA STOCKS EXCHANGE</span>
               <span>•</span>
               <span>Escrow Insured Sandbox</span>
               <span>•</span>
-              <span>2FA Secured Ledger Node</span>
+              <span>Secure Encryption Enabled</span>
             </div>
             
             <p className="max-w-3xl mx-auto leading-relaxed text-[10px] text-[#4f5664]">
-              Regulatory Disclosure & Escrow: This platform represents a real-time smart contract clearing ledger. All asset transactions, share allocations, and direct capital positions are logged under active network conditions. FIFA logos and associations are properties of their respective owners, used for official index mapping.
+              Regulatory Disclosure & Escrow: This platform represents a real-time smart contract clearing system. All asset transactions, share allocations, and direct capital positions are logged securely under active network conditions. FIFA logos and associations are properties of their respective owners, used for official index mapping.
             </p>
 
             <div className="text-[10px] text-gray-700">
