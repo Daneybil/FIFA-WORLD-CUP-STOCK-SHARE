@@ -9,12 +9,13 @@ import {
 } from 'firebase/firestore';
 
 const firebaseConfig = {
-  projectId: "enduring-tomorrow-3sjh2",
-  appId: "1:1077558186767:web:1006a3b0025b9d2d3b247a",
-  apiKey: "AIzaSyBkOaEGRXt14icGjF5Ai2hGiuDlRFkqrok",
-  authDomain: "enduring-tomorrow-3sjh2.firebaseapp.com",
-  storageBucket: "enduring-tomorrow-3sjh2.firebasestorage.app",
-  messagingSenderId: "1077558186767"
+  apiKey: "AIzaSyA9jeJK8CItiH-NkcNg2cUSExozN476pwI",
+  authDomain: "fifa-world-cup-stock-share.firebaseapp.com",
+  projectId: "fifa-world-cup-stock-share",
+  storageBucket: "fifa-world-cup-stock-share.firebasestorage.app",
+  messagingSenderId: "1086379398263",
+  appId: "1:1086379398263:web:6e3003107c5bf0fab92272",
+  measurementId: "G-EJWR4CZWJX"
 };
 
 // Initialize Firebase

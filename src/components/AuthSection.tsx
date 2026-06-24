@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, User, ShieldCheck, HelpCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { Lock, Mail, User, ShieldCheck, HelpCircle, ArrowRight, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -7,7 +7,8 @@ import {
   updateProfile,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  sendEmailVerification
 } from 'firebase/auth';
 
 interface AuthSectionProps {
@@ -22,6 +23,36 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+
+  // Password reset submit handler for the dedicated forgot password view
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    if (!resetEmail) {
+      setError("Please enter your email address to receive a reset link.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setSuccessMsg("We have sent a secure password-reset link to your email address.");
+    } catch (err: any) {
+      console.error("Password reset error:", err);
+      let localizedError = err.message || "Failed to trigger password reset.";
+      if (err.code === 'auth/user-not-found') {
+        localizedError = "No account found with this email.";
+      } else if (err.code === 'auth/invalid-email') {
+        localizedError = "Please enter a valid email address.";
+      }
+      setError(localizedError);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Email/Password login or registration
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,6 +83,13 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
         await updateProfile(userCredential.user, {
           displayName: displayName
         });
+        
+        try {
+          await sendEmailVerification(userCredential.user);
+          console.log("Verification email sent successfully.");
+        } catch (verifErr) {
+          console.error("Failed to send verification email:", verifErr);
+        }
         
         // Pass info back
         onAuthSuccess({
@@ -127,7 +165,7 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
   };
 
   return (
-    <div className="max-w-md mx-auto my-12 px-4 font-sans select-none">
+    <div className="max-w-md mx-auto my-12 px-4 font-sans select-none animate-fade-in">
       
       {/* Decorative Golden Ring Emblem */}
       <div className="flex justify-center mb-6">
@@ -144,35 +182,42 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
 
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold font-display text-white">
-            {isSignUp ? 'Create Portfolio Account' : 'Access Your Portfolio'}
+            {isForgotPasswordMode 
+              ? 'Reset Your Password' 
+              : isSignUp ? 'Create Portfolio Account' : 'Access Your Portfolio'
+            }
           </h2>
           <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
-            {isSignUp 
-              ? 'Create a secure account to buy shares and track your World Cup investments.' 
-              : 'Sign in to manage your portfolio and track your active holdings.'
+            {isForgotPasswordMode
+              ? 'Enter your registered email address below, and we will send you a secure link to reset your password.'
+              : isSignUp 
+                ? 'Create a secure account to buy shares and track your World Cup investments.' 
+                : 'Sign in to manage your portfolio and track your active holdings.'
             }
           </p>
         </div>
 
         {/* Auth Mode Toggle Tabs slider */}
-        <div className="grid grid-cols-2 bg-[#080a10] p-1 rounded-lg border border-white/5 mb-6">
-          <button
-            onClick={() => { setIsSignUp(false); setError(''); setSuccessMsg(''); }}
-            className={`py-2 text-xs font-semibold rounded uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-              !isSignUp ? 'bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold shadow-md' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Log In
-          </button>
-          <button
-            onClick={() => { setIsSignUp(true); setError(''); setSuccessMsg(''); }}
-            className={`py-2 text-xs font-semibold rounded uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-              isSignUp ? 'bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold shadow-md' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Sign Up
-          </button>
-        </div>
+        {!isForgotPasswordMode && (
+          <div className="grid grid-cols-2 bg-[#080a10] p-1 rounded-lg border border-white/5 mb-6">
+            <button
+              onClick={() => { setIsSignUp(false); setError(''); setSuccessMsg(''); }}
+              className={`py-2 text-xs font-semibold rounded uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                !isSignUp ? 'bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold shadow-md' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => { setIsSignUp(true); setError(''); setSuccessMsg(''); }}
+              className={`py-2 text-xs font-semibold rounded uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                isSignUp ? 'bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold shadow-md' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-3 bg-red-950/40 border border-red-500/30 text-red-200 text-xs rounded-lg flex items-center space-x-2">
@@ -188,87 +233,151 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
           </div>
         )}
 
-        {/* Input Credentials Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {isSignUp && (
+        {isForgotPasswordMode ? (
+          /* ==================== FORGOTTEN PASSWORD SECTION ==================== */
+          <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="block text-[11px] uppercase tracking-wider font-extrabold text-gray-400 text-left">Full Name</label>
+              <label className="block text-[11px] uppercase tracking-wider font-extrabold text-[#9ca2af] text-left">Email Address</label>
               <div className="relative">
-                <User className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
                 <input
-                  type="text"
+                  type="email"
                   required
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g. John Doe"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="developer@fifastocks.com"
                   className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium"
                 />
               </div>
             </div>
-          )}
 
-          <div className="space-y-1">
-            <label className="block text-[11px] uppercase tracking-wider font-extrabold text-[#9ca2af] text-left">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="developer@fifastocks.com"
-                className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium"
-              />
+            {/* Reset Action Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-gradient-to-b from-[#fde68a] to-[#d4af37] hover:from-white hover:to-[#fbbf24] text-black font-extrabold rounded-xl transition-all duration-300 text-xs font-display uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="flex items-center space-x-1.5">
+                  <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                  <span>Processing...</span>
+                </span>
+              ) : (
+                <span className="flex items-center justify-center space-x-1.5">
+                  <span>Send Reset Link</span>
+                  <ArrowRight className="w-4 h-4" />
+                </span>
+              )}
+            </button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => { setIsForgotPasswordMode(false); setError(''); setSuccessMsg(''); }}
+                className="text-xs font-bold text-[#d4af37] hover:text-white cursor-pointer hover:underline focus:outline-none"
+              >
+                Back to Sign In
+              </button>
             </div>
-          </div>
+          </form>
+        ) : (
+          /* Input Credentials Form */
+          <form onSubmit={handleSubmit} className="space-y-4">
+            
+            {isSignUp && (
+              <div className="space-y-1">
+                <label className="block text-[11px] uppercase tracking-wider font-extrabold text-gray-400 text-left">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    required
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium"
+                  />
+                </div>
+              </div>
+            )}
 
-          <div className="space-y-1">
-            <div className="flex justify-between items-center">
-              <label className="block text-[11px] uppercase tracking-wider font-extrabold text-gray-400">Password</label>
-              {!isSignUp && (
+            <div className="space-y-1">
+              <label className="block text-[11px] uppercase tracking-wider font-extrabold text-[#9ca2af] text-left">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="developer@fifastocks.com"
+                  className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <label className="block text-[11px] uppercase tracking-wider font-extrabold text-gray-400">Password</label>
+                {!isSignUp && (
+                  <button
+                    type="button"
+                    onClick={() => { setIsForgotPasswordMode(true); setError(''); setSuccessMsg(''); if (email) setResetEmail(email); }}
+                    className="text-[10px] text-gray-400 hover:text-white cursor-pointer hover:underline focus:outline-none"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 pl-10 pr-12 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium"
+                />
                 <button
                   type="button"
-                  onClick={handleForgotPassword}
-                  className="text-[10px] text-gray-400 hover:text-white cursor-pointer hover:underline focus:outline-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3 w-5 h-5 flex items-center justify-center text-gray-400 hover:text-[#d4af37] focus:outline-none transition-colors cursor-pointer"
+                  title={showPassword ? "Hide password" : "Show password"}
                 >
-                  Forgot Password?
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
-              )}
+              </div>
             </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium"
-              />
-            </div>
-          </div>
 
-          {/* Primary Action Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 bg-gradient-to-b from-[#fde68a] to-[#d4af37] hover:from-white hover:to-[#fbbf24] text-black font-extrabold rounded-xl transition-all duration-300 text-xs font-display uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
-          >
-            {loading ? (
-              <span className="flex items-center space-x-1.5">
-                <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                <span>Processing...</span>
-              </span>
-            ) : (
-              <span className="flex items-center justify-center space-x-1.5">
-                <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </span>
+            {isSignUp && (
+              <div className="p-3 bg-amber-500/5 border border-amber-500/10 text-[10.5px] text-gray-400 rounded-lg text-left leading-relaxed">
+                <span className="text-amber-500 font-bold uppercase tracking-wider block mb-0.5">Verification Dispatch Tip 📧</span>
+                Upon successful sign-up, a secure verification link will be dispatched. If you do not see the verification email, please check your spam folder or junk folder as it is dispatched securely.
+              </div>
             )}
-          </button>
 
-        </form>
+            {/* Primary Action Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-gradient-to-b from-[#fde68a] to-[#d4af37] hover:from-white hover:to-[#fbbf24] text-black font-extrabold rounded-xl transition-all duration-300 text-xs font-display uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="flex items-center space-x-1.5">
+                  <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                  <span>Processing...</span>
+                </span>
+              ) : (
+                <span className="flex items-center justify-center space-x-1.5">
+                  <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </span>
+              )}
+            </button>
+
+          </form>
+        )}
 
         {/* Divider separator */}
         <div className="relative my-6 flex items-center justify-center">

@@ -22,6 +22,7 @@ import MarketTicker from './components/MarketTicker';
 import MarketSection from './components/MarketSection';
 import PurchaseModal from './components/PurchaseModal';
 import UserDashboard from './components/UserDashboard';
+import PortalDashboard from './components/PortalDashboard';
 import TournamentCenter from './components/TournamentCenter';
 import AdminPanel from './components/AdminPanel';
 import AuthSection from './components/AuthSection';
@@ -37,7 +38,9 @@ import {
   getUserTransactions,
   getUserNotifications,
   markNotificationReadInFirestore,
-  clearAllUserNotificationsInFirestore
+  clearAllUserNotificationsInFirestore,
+  depositUserFunds,
+  getLatestPublicTransactions
 } from './lib/firebase-service';
 
 // Icon imports
@@ -151,8 +154,8 @@ export default function App() {
         // Pull verified real persistent logs from Firebase Firestore
         await syncFirebaseData(firebaseUser.uid);
         
-        // Redirect to portal if they were logging in
-        setActiveRoute((prev) => (prev === 'login' ? 'portal-dashboard' : prev));
+        // Redirect to portal if they were logging in or just landed on the dashboard
+        setActiveRoute((prev) => (prev === 'login' || prev === 'dashboard' ? 'portal-dashboard' : prev));
       } else {
         // Reset states under auth to standard local defaults
         setCurrentUser(null);
@@ -672,60 +675,29 @@ export default function App() {
   }, [userCash]);
 
 
-  // Real-time market purchase activity feeds (completely stable, permanent stock prices)
+  // Load actual verified activities from Firestore on mount
   useEffect(() => {
-    const feedInterval = setInterval(() => {
-      // Pick random country
-      const randCountry = countries[Math.floor(Math.random() * countries.length)];
-      if (!randCountry) return;
-
-      const randomNames = [
-        'Trader_UK_02', 'crypto_wizard_8', 'W CupWhale_9', '0x21a3...fb02', 'Messi_Is_G0at', 'ParisSaint_A',
-        'SambaBull_88', '0x5ca9...22ef', 'InvestmentRanger', 'HooliganFinances', 'Tokyo_Stox_3', 'USA_Speculator'
-      ];
-      const randomAmounts = [25.00, 50.00, 100.00, 200.00, 500.00, 50.00, 75.00, 150.00, 250.00, 1200.00];
-
-      const buyer = randomNames[Math.floor(Math.random() * randomNames.length)];
-      const cashSpent = randomAmounts[Math.floor(Math.random() * randomAmounts.length)];
-
-      const newActivityRecord: MarketActivity = {
-        id: `act-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        userName: buyer,
-        countryId: randCountry.id,
-        countryName: randCountry.name,
-        flag: randCountry.flag,
-        amountInvested: cashSpent,
-        timestamp: 'Just now'
-      };
-
-      // Add to activities, cap at 20 logs for token and space limits
-      setActivities(prev => [newActivityRecord, ...prev.slice(0, 18)]);
-
-      // Only reduce available shares, do NOT mutate currentPrice or change24h dynamically to keep them 100% permanent/stable
-      setCountries(prevList => {
-        return prevList.map((c) => {
-          if (c.id === randCountry.id) {
-            return {
-              ...c,
-              availableShares: Math.max(1000, c.availableShares - Math.round(cashSpent / c.currentPrice))
-            };
-          }
-          return c;
-        });
-      });
-
-      // Slide stats slightly
-      setMarketStats(prev => ({
-        ...prev,
-        totalSharesSold: prev.totalSharesSold + Math.round(cashSpent / randCountry.currentPrice),
-        totalTournamentPool: prev.totalTournamentPool + Math.round(cashSpent * 0.6)
-      }));
-
-    }, 35000); // Trigger every 35 seconds to keep the site very live but non-disruptive
-
-    return () => clearInterval(feedInterval);
-
-  }, [countries]);
+    const fetchPublicTxs = async () => {
+      try {
+        const txs = await getLatestPublicTransactions();
+        const mapped = txs.map(tx => ({
+          id: tx.id,
+          userName: tx.userId ? `Investor #${tx.userId.substring(0, 5)}` : 'Verified Investor',
+          countryId: tx.countryId,
+          countryName: tx.countryName,
+          flag: tx.flag || '🏳️',
+          amountInvested: tx.amountInvested,
+          timestamp: new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date(tx.date).toLocaleDateString(),
+        }));
+        if (mapped.length > 0) {
+          setActivities(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to fetch public activities:", err);
+      }
+    };
+    fetchPublicTxs();
+  }, []);
 
 
   // Complete permanent price/change settings - no spontaneous background price changes will happen, keeping them permanently at current figures unless a result is settled or administrative action is taken.
@@ -737,6 +709,17 @@ export default function App() {
   // Action handlers
   const handleAddFunds = (amt: number) => {
     setUserCash(prev => prev + amt);
+  };
+
+  const handleDepositFunds = async (amt: number) => {
+    if (!currentUser) return;
+    try {
+      const newBalance = await depositUserFunds(currentUser.uid, amt);
+      setUserCash(newBalance);
+    } catch (err) {
+      console.error("Deposit error:", err);
+      throw err;
+    }
   };
 
   // Process purchase completion from secure checkout wizard modal
@@ -808,7 +791,7 @@ export default function App() {
     const newAlert: AppNotification = {
       id: `n-${Date.now()}`,
       title: 'Equity Acquired!',
-      message: `Successfully allocated $${amount.toFixed(2)} to purchase ${shares.toFixed(4)} shares of ${selectedC.name}. Ledger node synchronised.`,
+      message: `Successfully allocated $${amount.toFixed(2)} to purchase ${shares.toFixed(4)} shares of ${selectedC.name}. Account synchronised.`,
       type: 'success',
       timestamp: 'Just now',
       read: false
@@ -1020,6 +1003,39 @@ export default function App() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
+  if (activeRoute === 'portal-dashboard') {
+    return (
+      <PortalDashboard
+        currentUser={currentUser}
+        onLogOut={handleSignOut}
+        holdings={holdings}
+        transactions={transactions}
+        activities={activities}
+        userCash={userCash}
+        countries={countries}
+        fixtures={fixtures}
+        onDepositFunds={handleDepositFunds}
+        onNavigateGuest={() => setActiveRoute('dashboard')}
+        onCompletePurchase={() => {
+          if (currentUser) {
+            syncFirebaseData(currentUser.uid);
+          }
+        }}
+        loadFootballData={loadFootballData}
+        apiLoading={apiLoading}
+        apiError={apiError}
+        lastSyncTime={lastSyncTime}
+        numTeamsLoaded={numTeamsLoaded}
+        numFixturesLoaded={numFixturesLoaded}
+        numStandingsLoaded={numStandingsLoaded}
+        initialSelectedCountry={selectedCountryBuy}
+        onClearInitialSelectedCountry={() => setSelectedCountryBuy(null)}
+        apiSuccessCount={apiSuccessCount}
+        apiFailedCount={apiFailedCount}
+      />
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-[#07090d] text-[#e2e8f0] flex flex-col justify-between font-sans selection:bg-[#d4af37]/30 selection:text-white overflow-x-hidden">
       
@@ -1127,7 +1143,7 @@ export default function App() {
                     activeRoute === 'login' ? 'text-emerald-300 border-b-2' : 'hover:text-emerald-300'
                   }`}
                 >
-                  🔑 Login / Access Portal
+                  🔑 Login / Sign Up
                 </button>
               )}
             </nav>
@@ -1339,7 +1355,7 @@ export default function App() {
                   activeRoute === 'login' ? 'bg-[#141924] text-emerald-300' : ''
                 }`}
               >
-                🔑 Login / Access Portal
+                🔑 Login / Sign Up
               </button>
             )}
 
@@ -1521,6 +1537,7 @@ export default function App() {
                     userCash={userCash}
                     countries={countries}
                     fixtures={fixtures}
+                    onDepositFunds={handleDepositFunds}
                   />
                 </div>
               ) : (
@@ -1648,6 +1665,7 @@ export default function App() {
                     userCash={userCash}
                     countries={countries}
                     fixtures={fixtures}
+                    onDepositFunds={handleDepositFunds}
                   />
                 </div>
               </div>
@@ -1792,6 +1810,7 @@ export default function App() {
                   userCash={userCash}
                   countries={countries}
                   fixtures={fixtures}
+                  onDepositFunds={handleDepositFunds}
                 />
               </div>
             ) : (
@@ -1863,6 +1882,7 @@ export default function App() {
               onAuthSuccess={(user) => {
                 setCurrentUser(user);
                 setAuthModalOpen(false);
+                setActiveRoute('portal-dashboard');
                 if (pendingBuyCountry) {
                   setSelectedCountryBuy(pendingBuyCountry);
                   setPendingBuyCountry(null);
@@ -1990,7 +2010,7 @@ export default function App() {
             <div className="flex justify-center space-x-6 items-center flex-wrap text-[#8b98b0] text-[10px]">
               <span className="font-black text-[#d4af37]">FIFA STOCKS EXCHANGE</span>
               <span>•</span>
-              <span>Escrow Insured Sandbox</span>
+              <span>Secure Custodial Escrow</span>
               <span>•</span>
               <span>Secure Encryption Enabled</span>
             </div>

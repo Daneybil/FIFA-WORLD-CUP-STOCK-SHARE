@@ -66,7 +66,7 @@ export default function HeroSection({
         </div>
 
         {/* Main Title heading matching screenshot */}
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display leading-[1.12] tracking-tight text-white select-none max-w-3xl mb-4">
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black font-display leading-[1.08] tracking-tight text-white select-none max-w-4xl mb-6">
           Own Shares In Your <br/>
           <span className="bg-gradient-to-r from-[#d4af37] via-[#f3e3a1] to-[#c5a02e] text-transparent bg-clip-text">
             Favorite World Cup Team
@@ -74,17 +74,34 @@ export default function HeroSection({
         </h1>
 
         {/* Subtitle matching screenshot with motivating advertising tone */}
-        <div className="text-center select-none mb-10 max-w-2xl px-2">
-          <p className="text-base sm:text-lg text-gray-200 font-extrabold leading-relaxed">
+        <div className="text-center select-none mb-12 max-w-3xl px-2">
+          <p className="text-xl sm:text-2xl text-white font-black leading-relaxed tracking-wide mb-5">
             Buy shares in teams to win big if they become champions!
           </p>
-          <div className="mt-4.5 bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden backdrop-blur-sm">
-            <p className="text-[#fde492] text-sm sm:text-base font-black uppercase tracking-wider mb-2 flex items-center justify-center gap-1.5 animate-pulse">
+          <div className="mt-5 bg-gradient-to-br from-[#d4af37]/20 via-[#d4af37]/5 to-black border-2 border-[#d4af37] rounded-3xl p-6 sm:p-8 shadow-[0_10px_30px_rgba(212,175,55,0.15)] relative overflow-hidden backdrop-blur-md">
+            <p className="text-yellow-400 text-base sm:text-lg font-black uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
               ✨ Perfect Opportunity to Become a Millionaire! ✨
             </p>
-            <p className="text-[#e2e8f0] text-xs sm:text-sm font-semibold leading-relaxed max-w-xl mx-auto">
+            <p className="text-white text-sm sm:text-base font-bold leading-relaxed max-w-2xl mx-auto">
               This World Cup match is coming to change lives forever! It is your absolute perfect time and opportunity to become a millionaire. Buy shares now at an ultra-cheaper rate and win bigger when the country you support wins the championship!
             </p>
+          </div>
+        </div>
+
+        {/* ==================== LARGE PROFESSIONAL YOUTUBE VIDEO SECTION ==================== */}
+        <div id="hero-presentation-video" className="w-full max-w-4xl px-2 mb-12 select-none">
+          <div className="relative bg-[#0d111c] border-2 border-[#d4af37] rounded-3xl shadow-[0_20px_50px_rgba(212,175,55,0.25)] overflow-hidden">
+            <div className="aspect-video w-full">
+              <iframe
+                id="presentation-video-frame"
+                className="w-full h-full"
+                src="https://www.youtube.com/embed/PBXkGP2CEFs"
+                title="FIFA World Cup Stock Share Presentation Video"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              ></iframe>
+            </div>
           </div>
         </div>
 
@@ -169,7 +186,7 @@ export default function HeroSection({
               <UserPlus className="w-5 h-5 text-black group-hover:scale-110 transition-transform" />
               <div className="text-center md:text-left">
                 <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">Create Account</span>
-                <span className="hidden md:block text-[9px] text-black/80 font-medium font-sans">Get $100 Demo Cash</span>
+                <span className="hidden md:block text-[9px] text-black/80 font-medium font-sans">Get $1,000 Test Balance</span>
               </div>
             </button>
 
@@ -184,14 +201,18 @@ export default function HeroSection({
                 <ShieldCheck className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h4 className="font-extrabold text-white text-sm sm:text-base font-display uppercase tracking-wide">Investor Security & Trust Shield</h4>
-                <p className="text-xs text-gray-400">Enterprise grade collateral backing, audited security clearing nodes, and real-time synchronisation.</p>
+                <h4 className="font-black text-white text-base sm:text-lg lg:text-xl font-display uppercase tracking-wider bg-gradient-to-r from-[#d4af37] to-white bg-clip-text text-transparent">
+                  Investor Security & Trust Shield
+                </h4>
+                <p className="text-xs sm:text-sm text-gray-300 font-medium mt-1">
+                  Enterprise grade collateral backing, audited security clearing nodes, and real-time synchronisation.
+                </p>
               </div>
             </div>
             <div className="flex gap-2 sm:gap-4 shrink-0 w-full md:w-auto">
-              <div className="p-3 bg-neutral-900/60 border border-[#20293d] rounded-xl flex-1 md:flex-initial text-center md:text-left">
+              <div className="p-3 bg-neutral-900/60 border-2 border-[#d4af37]/50 rounded-xl flex-1 md:flex-initial text-center md:text-left shadow-[0_0_15px_rgba(212,175,55,0.1)]">
                 <span className="block text-[9px] uppercase tracking-widest text-[#d4af37] font-extrabold font-mono">FULLY BACKED COLLATERAL</span>
-                <span className="block text-sm font-black text-white font-mono mt-0.5">$10,000,000 USD</span>
+                <span className="block text-sm sm:text-base font-black text-white font-mono mt-0.5">$1,000,000,000+ USD</span>
               </div>
               <div className="p-3 bg-neutral-900/60 border border-[#20293d] rounded-xl flex-1 md:flex-initial text-center md:text-left">
                 <span className="block text-[9px] uppercase tracking-widest text-emerald-400 font-extrabold font-mono font-sans">COMPLIANT AUDITS</span>

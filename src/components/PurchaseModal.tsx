@@ -22,6 +22,7 @@ interface PurchaseModalProps {
   userId: string | null;
   onClose: () => void;
   onCompletePurchase: () => void; // Tell parent to reload holdings / transactions from Firestore
+  isEmailVerified?: boolean;
 }
 
 export default function PurchaseModal({ 
@@ -29,7 +30,8 @@ export default function PurchaseModal({
   userCash, 
   userId, 
   onClose, 
-  onCompletePurchase 
+  onCompletePurchase,
+  isEmailVerified = true
 }: PurchaseModalProps) {
   // Step 1: Input amount
   // Step 2: CryptoMUS Payment Gateway
@@ -282,10 +284,19 @@ export default function PurchaseModal({
               </div>
             )}
 
+            {!isEmailVerified && (
+              <div className="bg-amber-500/10 border border-amber-500/20 px-3.5 py-3 rounded-lg text-xs text-amber-400 flex items-start space-x-2.5">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                <span>
+                  <strong>Verification Required:</strong> Your email address is unverified. Share purchasing is restricted for security. Please verify your email via the dashboard Security tab to proceed.
+                </span>
+              </div>
+            )}
+
             {/* Proceed Action button */}
             <button
               type="submit"
-              disabled={amount < 5 || !hasSufficientBalance || apiLoading}
+              disabled={amount < 5 || !hasSufficientBalance || apiLoading || !isEmailVerified}
               className="w-full py-4 bg-gradient-to-r from-[#d4af37] via-[#f7ebd1] to-[#bca03f] disabled:opacity-40 disabled:cursor-not-allowed text-black font-black font-display rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:brightness-105 active:scale-[0.98] flex items-center justify-center gap-2"
             >
               {apiLoading ? (
@@ -295,7 +306,7 @@ export default function PurchaseModal({
                 </>
               ) : (
                 <>
-                  <span>Proceed to CryptoMUS Gateway</span>
+                  <span>Execute Transaction</span>
                   <ArrowRight className="w-4.5 h-4.5" />
                 </>
               )}

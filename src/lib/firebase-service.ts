@@ -35,7 +35,7 @@ export async function getOrCreateUserProfile(uid: string, email: string, display
       uid,
       email,
       displayName: displayName || email.split('@')[0],
-      balance: 1000.00, // complimentary $1000 demo trading cash balance
+      balance: 0.00, // starts at clean $0.00 to guarantee real authenticated data with no fake balances
       totalInvested: 0
     };
     await setDoc(userDocRef, defaultProfile);
@@ -244,4 +244,43 @@ export async function clearAllUserNotificationsInFirestore(userId: string) {
     batch.delete(doc.ref);
   });
   await batch.commit();
+}
+
+// 10. Deposit user funds securely in Firestore user document
+export async function depositUserFunds(userId: string, amount: number): Promise<number> {
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) {
+    throw new Error("User profile not found in database");
+  }
+  const currentBalance = userSnap.data().balance || 0;
+  const newBalance = Number((currentBalance + amount).toFixed(2));
+  await updateDoc(userRef, { balance: newBalance });
+  
+  // Create a funding notification in Firestore
+  await createNotification(userId, {
+    title: "USD Collateral Deposited",
+    message: `Secure funding of $${amount.toFixed(2)} has been credited to your portfolio ledger balance.`,
+    type: "success"
+  });
+  
+  return newBalance;
+}
+
+// 11. Fetch latest public transactions from across the system for Live Activity Stream
+export async function getLatestPublicTransactions(): Promise<TransactionRecord[]> {
+  try {
+    const q = query(collection(db, 'transactions'));
+    const snap = await getDocs(q);
+    const txs: any[] = [];
+    snap.forEach(doc => {
+      txs.push(doc.data());
+    });
+    // Sort by date descending in-memory to guarantee safety and bypass complex indexing needs
+    txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return txs.slice(0, 20);
+  } catch (err) {
+    console.error("Error retrieving public transactions:", err);
+    return [];
+  }
 }

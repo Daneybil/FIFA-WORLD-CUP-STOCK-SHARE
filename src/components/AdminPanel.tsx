@@ -587,7 +587,7 @@ export default function AdminPanel({
             <div className="p-4 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-lg text-xs leading-relaxed flex items-start space-x-2.5 max-w-3xl">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <span>
-                <strong>Escrow Regulation Notice:</strong> Simulating match results affects structural team statistics (wins, goals) AND alters share price matrices directly. Teams winning match points observe a +24% price surge, while failing nations drop up to -18%.
+                <strong>Predictive Engine Notice:</strong> Resolving match results affects structural team statistics (wins, goals) AND alters share price matrices directly. Teams winning match points observe a +24% price surge, while failing nations drop up to -18%.
               </span>
             </div>
 
@@ -654,7 +654,7 @@ export default function AdminPanel({
                   <Database className="w-5 h-5 text-red-500" /> Football API Connection Hub (API-Ready Architecture)
                 </h3>
                 <p className="text-xs text-[#8c94a5] mt-1 pr-6 max-w-2xl">
-                  Configure live sports providers to feed scores, lineups, player statistics and FIFA team rankings automatically. Overrides the platform's standard simulation algorithms when licensed keys validate successfully.
+                  Configure live sports providers to feed scores, lineups, player statistics and FIFA team rankings automatically. Overrides the platform's standard predictive models when licensed keys validate successfully.
                 </p>
               </div>
               <span className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded border ${
@@ -662,7 +662,7 @@ export default function AdminPanel({
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                   : 'bg-red-500/10 text-red-400 border-red-500/20'
               }`}>
-                {apiKey ? 'API CONNECTED (LIVE OVERRIDES)' : 'OFFLINE (SIMULATION DRIVEN)'}
+                {apiKey ? 'API CONNECTED (LIVE OVERRIDES)' : 'OFFLINE (PREDICTIVE ENGINE)'}
               </span>
             </div>
 

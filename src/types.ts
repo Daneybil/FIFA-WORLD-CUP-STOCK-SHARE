@@ -43,6 +43,7 @@ export interface ShareHolding {
 
 export interface TransactionRecord {
   id: string;
+  userId?: string;
   date: string;
   countryId: string;
   countryName: string;

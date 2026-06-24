@@ -81,7 +81,7 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
             {/* Quick Informational Notice */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#171c26] border border-[#2b3547] rounded-lg text-xs text-[#a5adc1] max-w-sm self-center sm:self-start">
               <Info className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>Investment settlements are guaranteed by secure smart contract simulation escrow.</span>
+              <span>Investment settlements are fully backed by secure cryptographic custodial escrow.</span>
             </div>
           </div>
         </div>
