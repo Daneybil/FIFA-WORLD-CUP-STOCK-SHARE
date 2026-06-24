@@ -37,15 +37,17 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
     // Tabs
     let matchesTab = true;
     if (activeTab === 'trending') {
-      matchesTab = country.trending === 'up' || country.popularityScore >= 90;
+      matchesTab = country.status !== 'ELIMINATED' && (country.trending === 'up' || country.popularityScore >= 90);
     } else if (activeTab === 'speculative') {
-      matchesTab = country.winningSettlementPrice / country.currentPrice >= 12; // 12x or higher potential return
+      matchesTab = country.status !== 'ELIMINATED' && (country.winningSettlementPrice / country.currentPrice >= 12); // 12x or higher potential return
     } else if (activeTab === 'group') {
-      matchesTab = selectedGroup === 'All' ? true : country.group === selectedGroup;
+      matchesTab = country.status !== 'ELIMINATED' && (selectedGroup === 'All' ? true : country.group === selectedGroup);
     } else if (activeTab === 'active') {
       matchesTab = country.status === 'ACTIVE' || country.status === 'CHAMPION';
     } else if (activeTab === 'eliminated') {
       matchesTab = country.status === 'ELIMINATED';
+    } else {
+      matchesTab = country.status !== 'ELIMINATED';
     }
 
     return matchesSearch && matchesTab;

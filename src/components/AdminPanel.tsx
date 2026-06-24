@@ -717,45 +717,6 @@ export default function AdminPanel({
                     </p>
                   </div>
 
-                  {/* API connection metrics overview */}
-                  <div className="bg-[#171d2b]/65 p-4 rounded-lg border border-[#232b3d]/50 space-y-3 font-mono text-xs">
-                    <div className="flex justify-between items-center pb-1 border-b border-[#212c40]/30 font-sans">
-                      <span className="text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Real API Diagnostics</span>
-                      <span className="text-red-400 font-bold text-[10px]">FOOTBALL-DATA.ORG</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">API Status:</span>
-                      <strong className={`font-black uppercase ${!apiError && lastSyncTime ? 'text-emerald-400' : 'text-amber-500'}`}>
-                        {!apiError && lastSyncTime ? 'CONNECTED' : (apiError ? 'DISCONNECTED' : 'STANDBY')}
-                      </strong>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Last Successful Sync Time:</span>
-                      <strong className="text-gray-200">{lastSyncTime || 'Pending First Sync'}</strong>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Last API Response Time:</span>
-                      <strong className="text-gray-200">{lastResponseTime !== null ? `${lastResponseTime} ms` : '⏤'}</strong>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Number of Teams Loaded:</span>
-                      <strong className="text-emerald-400 font-bold">{numTeamsLoaded} / 32</strong>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Number of Fixtures Loaded:</span>
-                      <strong className="text-[#d4af37] font-bold">{numFixturesLoaded}</strong>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Number of Standings Loaded:</span>
-                      <strong className="text-blue-400 font-bold">{numStandingsLoaded}</strong>
-                    </div>
-                    {apiError && (
-                      <div className="text-[10px] text-red-400 p-2 bg-red-950/25 border border-red-900/45 rounded font-sans">
-                        <strong>API Node Error:</strong> {apiError}
-                      </div>
-                    )}
-                  </div>
-
                   {/* Trigger Sync button */}
                   <button
                     disabled={apiLoading}
