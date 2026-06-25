@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Coins, TrendingUp, Trophy, Calendar, Activity, BookOpen, ShieldCheck, UserPlus, FileText } from 'lucide-react';
+import { Users, Coins, TrendingUp, Trophy, Calendar, Activity, BookOpen, ShieldCheck, UserPlus, FileText, Play, AlertTriangle, Youtube, ExternalLink, Tv } from 'lucide-react';
 import { MarketStat } from '../types';
 
 interface HeroSectionProps {
@@ -19,6 +19,8 @@ export default function HeroSection({
   onNavigateToSection,
   onTriggerCreateAccount
 }: HeroSectionProps) {
+  const [videoMode, setVideoMode] = useState<'embed' | 'fallback'>('embed');
+  const [playClicked, setPlayClicked] = useState(false);
   const [timeLeft, setTimeLeft] = useState({
     days: 31,
     hours: 14,
@@ -91,17 +93,164 @@ export default function HeroSection({
         {/* ==================== LARGE PROFESSIONAL YOUTUBE VIDEO SECTION ==================== */}
         <div id="hero-presentation-video" className="w-full max-w-4xl px-2 mb-12 select-none">
           <div className="relative bg-[#0d111c] border-2 border-[#d4af37] rounded-3xl shadow-[0_20px_50px_rgba(212,175,55,0.25)] overflow-hidden">
-            <div className="aspect-video w-full">
-              <iframe
-                id="presentation-video-frame"
-                className="w-full h-full"
-                src="https://www.youtube.com/embed/PBXkGP2CEFs"
-                title="FIFA World Cup Stock Share Presentation Video"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              ></iframe>
+            
+            {/* Top Info Bar */}
+            <div className="bg-[#111625] border-b border-[#2d364d] px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+              <div className="flex items-center space-x-2.5">
+                <span className="relative flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500"></span>
+                </span>
+                <span className="text-[10px] font-mono font-black text-red-500 uppercase tracking-widest">FIFA LIVE</span>
+                <span className="text-xs font-bold text-gray-200 hidden sm:inline truncate max-w-sm">
+                  The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner
+                </span>
+              </div>
+              <div className="flex items-center bg-black/45 rounded-lg p-0.5 border border-[#2d364d]">
+                <button
+                  onClick={() => setVideoMode('embed')}
+                  className={`px-3 py-1 rounded text-[10px] font-mono font-bold uppercase transition-all duration-200 ${
+                    videoMode === 'embed'
+                      ? 'bg-[#d4af37] text-black shadow-[0_2px_8px_rgba(212,175,55,0.3)]'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Embedded Player
+                </button>
+                <button
+                  onClick={() => setVideoMode('fallback')}
+                  className={`px-3 py-1 rounded text-[10px] font-mono font-bold uppercase transition-all duration-200 ${
+                    videoMode === 'fallback'
+                      ? 'bg-[#d4af37] text-black shadow-[0_2px_8px_rgba(212,175,55,0.3)]'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Direct Stream Card
+                </button>
+              </div>
             </div>
+
+            {/* Video Body */}
+            {videoMode === 'embed' ? (
+              <div className="aspect-video w-full relative bg-black">
+                {!playClicked ? (
+                  <div 
+                    className="absolute inset-0 w-full h-full cursor-pointer relative overflow-hidden flex items-center justify-center group" 
+                    onClick={() => setPlayClicked(true)}
+                  >
+                    {/* Background image: high-quality guaranteed thumbnail */}
+                    <img 
+                      src="https://img.youtube.com/vi/8bK6aFcsAO4/hqdefault.jpg" 
+                      alt="The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner Thumbnail"
+                      className="absolute inset-0 w-full h-full object-cover opacity-85 transition-transform duration-700 group-hover:scale-105"
+                      referrerPolicy="no-referrer"
+                    />
+                    
+                    {/* Dark gradient shadow */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/60" />
+                    
+                    {/* Big glowing custom YouTube Play Button */}
+                    <div className="relative z-10 flex flex-col items-center space-y-4">
+                      <div className="w-20 h-20 bg-red-600 hover:bg-red-500 rounded-2xl flex items-center justify-center shadow-[0_10px_35px_rgba(220,38,38,0.6)] border border-white/20 transition-all duration-300 transform group-hover:scale-110 active:scale-95">
+                        <Play className="w-10 h-10 text-white fill-white ml-1.5" />
+                      </div>
+                      <span className="text-xs font-black text-white tracking-widest uppercase px-3.5 py-2 bg-black/80 border border-[#d4af37]/45 rounded-lg backdrop-blur-sm">
+                        Click to Play Stream
+                      </span>
+                    </div>
+
+                    {/* Quick Badge overlay */}
+                    <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-red-600 text-white font-mono text-[10px] font-black uppercase tracking-widest rounded-md flex items-center gap-1.5 shadow-md">
+                      <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+                      <span>LIVE STREAM</span>
+                    </div>
+                  </div>
+                ) : (
+                  <iframe
+                    id="presentation-video-frame"
+                    className="w-full h-full"
+                    src="https://www.youtube.com/embed/8bK6aFcsAO4?autoplay=1&rel=0&modestbranding=1"
+                    title="The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  ></iframe>
+                )}
+              </div>
+            ) : (
+              <div className="aspect-video w-full relative overflow-hidden flex flex-col justify-center items-center bg-gradient-to-br from-[#0c101c] via-[#111728] to-[#0c101c]">
+                {/* Background Thumbnail preview */}
+                <img 
+                  src="https://img.youtube.com/vi/8bK6aFcsAO4/hqdefault.jpg" 
+                  alt="FIFA Awards Stream background"
+                  className="absolute inset-0 w-full h-full object-cover opacity-25 blur-sm scale-105"
+                  referrerPolicy="no-referrer"
+                />
+                
+                {/* Interactive Content */}
+                <div className="relative z-10 max-w-lg mx-auto text-center px-4 flex flex-col items-center">
+                  <div className="w-16 h-16 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.5)] cursor-pointer mb-4 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-white/25">
+                    <a 
+                      href="https://www.youtube.com/watch?v=8bK6aFcsAO4" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="w-full h-full flex items-center justify-center pl-1"
+                    >
+                      <Play className="w-7 h-7 text-white fill-white" />
+                    </a>
+                  </div>
+                  
+                  <span className="px-2.5 py-1 bg-black/75 border border-red-500/50 rounded text-[9px] font-mono font-bold text-red-500 uppercase tracking-widest mb-3">
+                    Broadcasting on YouTube
+                  </span>
+                  
+                  <h3 className="text-sm sm:text-base font-extrabold text-white leading-snug tracking-tight mb-2">
+                    The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner
+                  </h3>
+                  <p className="text-[11px] text-[#d4af37]/90 font-semibold mb-6">
+                    Official Feed ⏤ Broadcast by FIFA
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2.5 w-full justify-center">
+                    <a
+                      href="https://www.youtube.com/watch?v=8bK6aFcsAO4"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-lg transition-colors cursor-pointer"
+                    >
+                      <Youtube className="w-4 h-4 fill-white" />
+                      <span>Watch Live on YouTube</span>
+                    </a>
+                    
+                    <button
+                      onClick={() => setVideoMode('embed')}
+                      className="px-5 py-2.5 bg-[#1a2135] hover:bg-[#252f4c] text-gray-200 border border-[#374464] font-medium text-xs rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <Tv className="w-4 h-4 text-gray-400" />
+                      <span>Try Embedded Player</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Stream Status / Fallback Notice */}
+            <div className="bg-[#111625]/60 px-4 py-2.5 flex items-center justify-between text-[11px] text-gray-400 select-none">
+              <span className="flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-[#d4af37]" />
+                <span>Regional embed blockage? Use the <b>Direct Stream Card</b> to play directly on YouTube.</span>
+              </span>
+              <a
+                href="https://www.youtube.com/watch?v=8bK6aFcsAO4"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white underline font-bold flex items-center gap-1 ml-2 text-gray-300 font-mono text-[10px]"
+              >
+                <span>watch on youtube</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Mail, User, ShieldCheck, HelpCircle, ArrowRight, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Logo } from './Logo';
 import { auth } from '../lib/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -169,8 +170,8 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
       
       {/* Decorative Golden Ring Emblem */}
       <div className="flex justify-center mb-6">
-        <div className="relative w-16 h-16 rounded-full bg-gradient-to-b from-[#fde68a] to-[#d4af37] p-1 shadow-[0_8px_30px_rgba(212,175,55,0.25)] flex items-center justify-center">
-          <ShieldCheck className="w-8 h-8 text-black" />
+        <div className="relative p-1 bg-gradient-to-b from-[#fde68a] to-[#d4af37] rounded-3xl shadow-[0_8px_30px_rgba(212,175,55,0.4)] flex items-center justify-center">
+          <Logo size={72} />
         </div>
       </div>
 

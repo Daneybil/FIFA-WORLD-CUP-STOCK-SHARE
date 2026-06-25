@@ -29,13 +29,18 @@ export async function getOrCreateUserProfile(uid: string, email: string, display
   const userDocSnap = await getDoc(userDocRef);
 
   if (userDocSnap.exists()) {
-    return userDocSnap.data() as UserProfile;
+    const data = userDocSnap.data() as UserProfile;
+    if (data.balance === 1000.00 || data.balance === 0) {
+      data.balance = 5000.00;
+      await updateDoc(userDocRef, { balance: 5000.00 });
+    }
+    return data;
   } else {
     const defaultProfile: UserProfile = {
       uid,
       email,
       displayName: displayName || email.split('@')[0],
-      balance: 0.00, // starts at clean $0.00 to guarantee real authenticated data with no fake balances
+      balance: 5000.00, // Starts at $5,000.00 for demo/testing purposes as requested
       totalInvested: 0
     };
     await setDoc(userDocRef, defaultProfile);

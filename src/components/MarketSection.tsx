@@ -37,7 +37,8 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
     // Tabs
     let matchesTab = true;
     if (activeTab === 'trending') {
-      matchesTab = country.status !== 'ELIMINATED' && (country.trending === 'up' || country.popularityScore >= 90);
+      const EXCLUSIVE_TRENDING_IDS = ['CAN', 'USA', 'MEX', 'BRA', 'GER', 'FRA', 'ESP', 'NOR', 'ENG', 'POR', 'ARG'];
+      matchesTab = EXCLUSIVE_TRENDING_IDS.includes(country.id.toUpperCase());
     } else if (activeTab === 'speculative') {
       matchesTab = country.status !== 'ELIMINATED' && (country.winningSettlementPrice / country.currentPrice >= 12); // 12x or higher potential return
     } else if (activeTab === 'group') {
@@ -62,7 +63,7 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
     ? (selectedCalcCountry.winningSettlementPrice / selectedCalcCountry.currentPrice).toFixed(1)
     : '0.0';
 
-  const groups = ['All', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const groups = ['All', ...Array.from(new Set(countries.map(c => c.group))).filter(Boolean).sort()];
 
   return (
     <div className="bg-[#0b0e14] py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -83,7 +84,7 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
             {/* Quick Informational Notice */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#171c26] border border-[#2b3547] rounded-lg text-xs text-[#a5adc1] max-w-sm self-center sm:self-start">
               <Info className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>Investment settlements are fully backed by secure cryptographic custodial escrow.</span>
+              <span>Holder ownership deeds settled dynamically based on active rules.</span>
             </div>
           </div>
         </div>

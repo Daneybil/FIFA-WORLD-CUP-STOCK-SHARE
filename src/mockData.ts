@@ -1,6 +1,6 @@
 import { CountryShare, MatchFixture, MarketActivity, AppNotification } from './types';
 
-export const INITIAL_COUNTRIES: CountryShare[] = [
+const ALL_MOCK_COUNTRIES: CountryShare[] = [
   // Group A
   {
     id: 'QAT',
@@ -1079,24 +1079,43 @@ export const INITIAL_COUNTRIES: CountryShare[] = [
     status: 'ACTIVE',
     statistics: { wins: 0, draws: 0, losses: 0, goalsScored: 0, goalsConceded: 0, matchesPlayed: 0 },
     description: 'Electrifying explosive speed on counter maneuvers with incredible crowd power backing.'
+  },
+  {
+    id: 'CUW',
+    name: 'Curaçao',
+    flag: '🇨🇼',
+    rating: 3,
+    currentPrice: 1.50,
+    winningSettlementPrice: 100.00,
+    potentialReturn: 66.7,
+    group: 'D',
+    ranking: 86,
+    popularityScore: 65,
+    trending: 'stable',
+    change24h: 0.0,
+    availableShares: 150000,
+    totalSharesPurchased: 1200,
+    status: 'ACTIVE',
+    statistics: { wins: 0, draws: 0, losses: 0, goalsScored: 0, goalsConceded: 0, matchesPlayed: 0 },
+    description: 'Caribbean flair combined with tactical defensive organization and rapid transition plays.'
   }
 ];
+
+const BLACKLISTED_IDS = [
+  'QAT', 'UKR', 'WAL', 'VEN', 'NGA', 'ECU', 'HON', 'NIR', 
+  'POL', 'PER', 'BOL', 'DEN', 'PRY', 'PAR', 'CHI', 'CRC', 
+  'SRB', 'ITA', 'CMR', 'PAN', 'JAM'
+];
+
+export const INITIAL_COUNTRIES: CountryShare[] = ALL_MOCK_COUNTRIES.filter(
+  c => !BLACKLISTED_IDS.includes(c.id)
+);
 
 export const INITIAL_FIXTURES: MatchFixture[] = [
   {
     id: 'm1',
-    homeTeamId: 'ARG',
-    awayTeamId: 'KSA',
-    homeScore: 2,
-    awayScore: 1,
-    date: '2026-06-20',
-    stage: 'Group Stage',
-    status: 'Finished'
-  },
-  {
-    id: 'm2',
-    homeTeamId: 'FRA',
-    awayTeamId: 'ENG',
+    homeTeamId: 'CUW',
+    awayTeamId: 'CIV',
     homeScore: null,
     awayScore: null,
     date: '2026-06-25',
@@ -1104,9 +1123,9 @@ export const INITIAL_FIXTURES: MatchFixture[] = [
     status: 'Scheduled'
   },
   {
-    id: 'm3',
-    homeTeamId: 'BRA',
-    awayTeamId: 'GER',
+    id: 'm2',
+    homeTeamId: 'TUN',
+    awayTeamId: 'NED',
     homeScore: null,
     awayScore: null,
     date: '2026-06-26',
@@ -1114,33 +1133,23 @@ export const INITIAL_FIXTURES: MatchFixture[] = [
     status: 'Scheduled'
   },
   {
-    id: 'm4',
-    homeTeamId: 'POR',
-    awayTeamId: 'ESP',
-    homeScore: 2,
-    awayScore: 2,
-    date: '2026-06-18',
-    stage: 'Group Stage',
-    status: 'Live'
-  },
-  {
-    id: 'm5',
-    homeTeamId: 'USA',
-    awayTeamId: 'JPN',
+    id: 'm3',
+    homeTeamId: 'JPN',
+    awayTeamId: 'SWE',
     homeScore: null,
     awayScore: null,
-    date: '2026-06-28',
+    date: '2026-06-27',
     stage: 'Group Stage',
     status: 'Scheduled'
   },
   {
-    id: 'm6',
-    homeTeamId: 'MOR',
-    awayTeamId: 'NED',
+    id: 'm4',
+    homeTeamId: 'TUR',
+    awayTeamId: 'USA',
     homeScore: null,
     awayScore: null,
-    date: '2026-06-30',
-    stage: 'Semi-Finals',
+    date: '2026-06-28',
+    stage: 'Group Stage',
     status: 'Scheduled'
   }
 ];

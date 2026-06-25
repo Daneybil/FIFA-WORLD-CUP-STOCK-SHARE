@@ -304,7 +304,7 @@ export default function UserDashboard({
                               <div className="flex justify-between items-center py-1">
                                 <div className="flex items-center space-x-2 w-[40%] overflow-hidden">
                                   <span className="text-lg shrink-0">{homeCountry?.flag || '🏳️'}</span>
-                                  <span className="text-xs font-semibold text-white truncate">{homeCountry?.name || match.homeTeamId}</span>
+                                  <span className="text-xs font-semibold text-white truncate">{homeCountry?.name || (match.homeTeamId === 'TBD' ? 'To Be Decided' : match.homeTeamId)}</span>
                                 </div>
                                 <div className="flex justify-center items-center w-[20%] font-mono text-[10px] bg-[#1a2133] px-2 py-1 rounded font-bold border border-[#2d374d]">
                                   {match.status !== 'Scheduled' ? (
@@ -316,7 +316,7 @@ export default function UserDashboard({
                                   )}
                                 </div>
                                 <div className="flex items-center space-x-2 w-[40%] justify-end text-right overflow-hidden">
-                                  <span className="text-xs font-semibold text-white truncate">{awayCountry?.name || match.awayTeamId}</span>
+                                  <span className="text-xs font-semibold text-white truncate">{awayCountry?.name || (match.awayTeamId === 'TBD' ? 'To Be Decided' : match.awayTeamId)}</span>
                                   <span className="text-lg shrink-0">{awayCountry?.flag || '🏳️'}</span>
                                 </div>
                               </div>

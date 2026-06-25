@@ -8,7 +8,7 @@ export interface CountryShare {
   currentPrice: number; // e.g. 1.00
   winningSettlementPrice: number; // e.g. 100.00
   potentialReturn: number; // e.g. 100
-  group: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+  group: string;
   ranking: number;
   popularityScore: number; // 0-100
   trending: 'up' | 'down' | 'stable';
@@ -72,7 +72,7 @@ export interface MatchFixture {
   homeScore?: number;
   awayScore?: number;
   date: string;
-  stage: 'Group Stage' | 'Round of 16' | 'Quarter-Finals' | 'Semi-Finals' | 'Final';
+  stage: 'Group Stage' | 'Round of 32' | 'Round of 16' | 'Quarter-Finals' | 'Semi-Finals' | 'Third Place' | 'Final';
   status: 'Scheduled' | 'Live' | 'Finished';
 }
 

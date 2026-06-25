@@ -19,6 +19,7 @@ import {
 // Component imports
 import HeroSection from './components/HeroSection';
 import MarketTicker from './components/MarketTicker';
+import { Logo } from './components/Logo';
 import MarketSection from './components/MarketSection';
 import PurchaseModal from './components/PurchaseModal';
 import UserDashboard from './components/UserDashboard';
@@ -61,6 +62,33 @@ import {
   Star
 } from 'lucide-react';
 
+const BLACKLISTED_IDS = [
+  'QAT', 'UKR', 'WAL', 'VEN', 'NGA', 'ECU', 'HON', 'NIR', 
+  'POL', 'PER', 'BOL', 'DEN', 'PRY', 'PAR', 'CHI', 'CRC', 
+  'SRB', 'ITA', 'CMR', 'PAN', 'JAM'
+];
+
+const getFlagEmoji = (tla: string): string => {
+  const tlaUpper = tla.toUpperCase();
+  const flags: Record<string, string> = {
+    QAT: '🇶🇦', ECU: '🇪🇨', SEN: '🇸🇳', NED: '🇳🇱',
+    ENG: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', IRN: '🇮🇷', USA: '🇺🇸', WAL: '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+    ARG: '🇦🇷', KSA: '🇸🇦', MEX: '🇲🇽', POL: '🇵🇱',
+    FRA: '🇫🇷', AUS: '🇦🇺', DEN: '🇩🇰', TUN: '🇹🇳',
+    ESP: '🇪🇸', CRC: '🇨🇷', GER: '🇩🇪', JPN: '🇯🇵',
+    BEL: '🇧🇪', CAN: '🇨🇦', MAR: '🇲🇦', CRO: '🇭🇷',
+    BRA: '🇧🇷', SRB: '🇷🇸', SUI: '🇨🇭', CMR: '🇨🇲',
+    POR: '🇵🇹', GHA: '🇬🇭', URU: '🇺🇾', KOR: '🇰🇷',
+    PAR: '🇵🇾', RSA: '🇿🇦', ALG: '🇩🇿', NZL: '🇳🇿',
+    SWE: '🇸🇪', CZE: '🇨🇿', TUR: '🇹🇷', AUT: '🇦🇹',
+    COL: '🇨🇴', EGY: '🇪🇬', HAI: '🇭🇹', BIH: '🇧🇦',
+    PAN: '🇵🇦', CPV: '🇨🇻', COD: '🇨🇩', CIV: '🇨🇮',
+    JOR: '🇯🇴', IRQ: '🇮🇶', UZB: '🇺🇿', NOR: '🇳🇴',
+    SCO: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', CUW: '🇨🇼'
+  };
+  return flags[tlaUpper] || '🏳️';
+};
+
 export default function App() {
   // Navigation Routing Tab
   const [activeRoute, setActiveRoute] = useState<'dashboard' | 'market' | 'live-data' | 'tournament' | 'how-it-works' | 'admin' | 'login' | 'portal-dashboard'>('dashboard');
@@ -80,12 +108,21 @@ export default function App() {
   // States with persistent LocalStorage retrieval
   const [countries, setCountries] = useState<CountryShare[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_countries');
-    let loaded = INITIAL_COUNTRIES;
+    const REAL_WORLD_CUP_QUALIFIED_IDS = [
+      'SEN', 'NED', 'ENG', 'IRN', 'USA',
+      'ARG', 'KSA', 'MEX', 'FRA', 'AUS', 'TUN',
+      'ESP', 'GER', 'JPN', 'BEL', 'CAN', 'MAR', 'CRO',
+      'BRA', 'SUI', 'POR', 'GHA', 'URU', 'KOR'
+    ];
+    // Filter to only officially qualified World Cup teams on initial load
+    const defaultFiltered = INITIAL_COUNTRIES.filter(c => REAL_WORLD_CUP_QUALIFIED_IDS.includes(c.id) && !BLACKLISTED_IDS.includes(c.id));
+    let loaded = defaultFiltered;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === INITIAL_COUNTRIES.length) {
-          loaded = parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Keep only saved items that are officially qualified to prevent any mock teams from appearing
+          loaded = parsed.filter(c => (REAL_WORLD_CUP_QUALIFIED_IDS.includes(c.id) || parsed.length <= 48) && !BLACKLISTED_IDS.includes(c.id));
         }
       } catch (e) {}
     }
@@ -106,22 +143,26 @@ export default function App() {
 
   const [fixtures, setFixtures] = useState<MatchFixture[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_fixtures');
-    return saved ? JSON.parse(saved) : INITIAL_FIXTURES;
+    const loaded = saved ? JSON.parse(saved) : INITIAL_FIXTURES;
+    return Array.isArray(loaded) ? loaded.filter((f: MatchFixture) => !BLACKLISTED_IDS.includes(f.homeTeamId) && !BLACKLISTED_IDS.includes(f.awayTeamId)) : [];
   });
 
   const [holdings, setHoldings] = useState<ShareHolding[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_holdings');
-    return saved ? JSON.parse(saved) : []; // Seeding empty holdings so users can buy freely
+    const loaded = saved ? JSON.parse(saved) : []; // Seeding empty holdings so users can buy freely
+    return Array.isArray(loaded) ? loaded.filter((h: ShareHolding) => !BLACKLISTED_IDS.includes(h.countryId)) : [];
   });
 
   const [transactions, setTransactions] = useState<TransactionRecord[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_transactions');
-    return saved ? JSON.parse(saved) : [];
+    const loaded = saved ? JSON.parse(saved) : [];
+    return Array.isArray(loaded) ? loaded.filter((t: TransactionRecord) => !BLACKLISTED_IDS.includes(t.countryId)) : [];
   });
 
   const [activities, setActivities] = useState<MarketActivity[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_activities');
-    return saved ? JSON.parse(saved) : INITIAL_ACTIVITIES;
+    const loaded = saved ? JSON.parse(saved) : INITIAL_ACTIVITIES;
+    return Array.isArray(loaded) ? loaded.filter((act: MarketActivity) => !BLACKLISTED_IDS.includes(act.countryId)) : [];
   });
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
@@ -132,7 +173,10 @@ export default function App() {
   // Escrow Cash allocated
   const [userCash, setUserCash] = useState<number>(() => {
     const saved = localStorage.getItem('world_cup_shares_cash');
-    return saved ? parseFloat(saved) : 1000.00; // Giving $1,000 for sandboxed actions out of the box!
+    if (saved && (parseFloat(saved) === 1000.00 || parseFloat(saved) === 0)) {
+      return 5000.00;
+    }
+    return saved ? parseFloat(saved) : 5000.00; // Giving $5,000 for sandboxed actions out of the box!
   });
 
   // User persistent authentication state pre-linked for Firebase
@@ -154,15 +198,15 @@ export default function App() {
         // Pull verified real persistent logs from Firebase Firestore
         await syncFirebaseData(firebaseUser.uid);
         
-        // Redirect to portal if they were logging in or just landed on the dashboard
-        setActiveRoute((prev) => (prev === 'login' || prev === 'dashboard' ? 'portal-dashboard' : prev));
+        // Redirect to portal if they were actively logging in
+        setActiveRoute((prev) => (prev === 'login' ? 'portal-dashboard' : prev));
       } else {
         // Reset states under auth to standard local defaults
         setCurrentUser(null);
         setHoldings([]);
         setTransactions([]);
         setNotifications([]);
-        setUserCash(1000.00);
+        setUserCash(5000.00);
       }
     });
 
@@ -190,7 +234,7 @@ export default function App() {
   const handleSignOut = async () => {
     await signOut(auth);
     setCurrentUser(null);
-    setUserCash(1000.00);
+    setUserCash(5000.00);
     setHoldings([]);
     setTransactions([]);
     setNotifications([]);
@@ -237,11 +281,22 @@ export default function App() {
   const [apiSuccessCount, setApiSuccessCount] = useState<number>(() => Number(localStorage.getItem('world_cup_api_success_count') || '1'));
   const [apiFailedCount, setApiFailedCount] = useState<number>(() => Number(localStorage.getItem('world_cup_api_failed_count') || '0'));
 
-  // Regional language detection state
-  const [detectedLanguage, setDetectedLanguage] = useState('English');
+  // Regional language detection state with persistent localStorage retrieval
+  const [detectedLanguage, setDetectedLanguage] = useState(() => {
+    return localStorage.getItem('world_cup_shares_detected_lang') || 'English';
+  });
   const [detectionNoticeOpen, setDetectionNoticeOpen] = useState(false);
 
+  // Sync language selection to localStorage
   useEffect(() => {
+    localStorage.setItem('world_cup_shares_detected_lang', detectedLanguage);
+  }, [detectedLanguage]);
+
+  useEffect(() => {
+    // If a language has already been selected by the user, do not override
+    if (localStorage.getItem('world_cup_shares_detected_lang')) {
+      return;
+    }
     try {
       const browserLang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
       const langLower = browserLang.toLowerCase();
@@ -324,15 +379,15 @@ export default function App() {
 
       // 1. Filter qualified countries (exclude any non-qualified or mock-up team that is not part of the WC dataset)
       const REAL_WOLD_CUP_QUALIFIED_IDS = [
-        'QAT', 'ECU', 'SEN', 'NED', 'ENG', 'IRN', 'USA', 'WAL',
-        'ARG', 'KSA', 'MEX', 'POL', 'FRA', 'AUS', 'DEN', 'TUN',
-        'ESP', 'CRC', 'GER', 'JPN', 'BEL', 'CAN', 'MAR', 'CRO',
-        'BRA', 'SRB', 'SUI', 'CMR', 'POR', 'GHA', 'URU', 'KOR'
+        'SEN', 'NED', 'ENG', 'IRN', 'USA',
+        'ARG', 'KSA', 'MEX', 'FRA', 'AUS', 'TUN',
+        'ESP', 'GER', 'JPN', 'BEL', 'CAN', 'MAR', 'CRO',
+        'BRA', 'SUI', 'POR', 'GHA', 'URU', 'KOR'
       ];
       
       let qualifiedIds = REAL_WOLD_CUP_QUALIFIED_IDS;
       if (teamsData && Array.isArray(teamsData.teams) && teamsData.teams.length > 0) {
-        qualifiedIds = teamsData.teams.map((t: any) => t.tla?.toUpperCase()).filter(Boolean);
+        qualifiedIds = teamsData.teams.map((t: any) => t.tla?.toUpperCase()).filter((id: string) => id && !BLACKLISTED_IDS.includes(id));
       }
 
       // 2. Parse Group Standings statistics matrix
@@ -362,11 +417,18 @@ export default function App() {
 
       // 3. Update active lists & stats and resolve statuses
       setCountries(prevList => {
-        const filteredInitials = INITIAL_COUNTRIES.filter(c => qualifiedIds.includes(c.id));
-        
-        return filteredInitials.map(initialC => {
-          const existingC = prevList.find(c => c.id === initialC.id) || initialC;
-          const apiStats = statsMap[initialC.id];
+        if (!teamsData || !Array.isArray(teamsData.teams) || teamsData.teams.length === 0) {
+          return prevList;
+        }
+
+        return teamsData.teams.map((apiTeam: any) => {
+          const id = apiTeam.tla?.toUpperCase();
+          if (!id || BLACKLISTED_IDS.includes(id)) return null;
+
+          const initialC = INITIAL_COUNTRIES.find(c => c.id === id);
+          const existingC = prevList.find(c => c.id === id);
+
+          const apiStats = statsMap[id];
           
           const statistics = apiStats ? {
             wins: apiStats.wins,
@@ -375,11 +437,11 @@ export default function App() {
             goalsScored: apiStats.goalsScored,
             goalsConceded: apiStats.goalsConceded,
             matchesPlayed: apiStats.matchesPlayed
-          } : existingC.statistics;
+          } : (existingC?.statistics || initialC?.statistics || { wins: 0, draws: 0, losses: 0, goalsScored: 0, goalsConceded: 0, matchesPlayed: 0 });
 
-          let status: 'ACTIVE' | 'ELIMINATED' | 'CHAMPION' = 'ACTIVE';
+          let status: 'ACTIVE' | 'ELIMINATED' | 'CHAMPION' = existingC?.status || initialC?.status || 'ACTIVE';
           
-          if (apiStats && apiStats.matchesPlayed >= 3 && (apiStats.position === 3 || apiStats.position === 4)) {
+          if (apiStats && apiStats.matchesPlayed >= 3 && apiStats.position > 2) {
             status = 'ELIMINATED';
           }
 
@@ -392,10 +454,10 @@ export default function App() {
                 ? finalMatch.awayTeam?.tla 
                 : null;
               
-              if (winnerTla && winnerTla.toUpperCase() === initialC.id) {
+              if (winnerTla && winnerTla.toUpperCase() === id) {
                 status = 'CHAMPION';
               } else if (winnerTla) {
-                if (finalMatch.homeTeam?.tla?.toUpperCase() === initialC.id || finalMatch.awayTeam?.tla?.toUpperCase() === initialC.id) {
+                if (finalMatch.homeTeam?.tla?.toUpperCase() === id || finalMatch.awayTeam?.tla?.toUpperCase() === id) {
                   status = 'ELIMINATED';
                 }
               }
@@ -405,18 +467,18 @@ export default function App() {
               if (m.status === 'FINISHED' && m.stage !== 'GROUP_STAGE') {
                 const homeTla = m.homeTeam?.tla?.toUpperCase();
                 const awayTla = m.awayTeam?.tla?.toUpperCase();
-                if (homeTla === initialC.id || awayTla === initialC.id) {
+                if (homeTla === id || awayTla === id) {
                   const winner = m.score?.winner;
-                  if (winner === 'HOME_TEAM' && awayTla === initialC.id) {
+                  if (winner === 'HOME_TEAM' && awayTla === id) {
                     status = 'ELIMINATED';
-                  } else if (winner === 'AWAY_TEAM' && homeTla === initialC.id) {
+                  } else if (winner === 'AWAY_TEAM' && homeTla === id) {
                     status = 'ELIMINATED';
                   } else if (m.score?.fullTime?.home !== null && m.score?.fullTime?.away !== null) {
                     const hScore = m.score.fullTime.home ?? 0;
                     const aScore = m.score.fullTime.away ?? 0;
-                    if (hScore > aScore && awayTla === initialC.id) {
+                    if (hScore > aScore && awayTla === id) {
                       status = 'ELIMINATED';
-                    } else if (aScore > hScore && homeTla === initialC.id) {
+                    } else if (aScore > hScore && homeTla === id) {
                       status = 'ELIMINATED';
                     }
                   }
@@ -425,30 +487,51 @@ export default function App() {
             });
           }
 
-           const sWins = statistics.wins || 0;
+          const sWins = statistics.wins || 0;
           const sLosses = statistics.losses || 0;
-          const baseSettlement = initialC.winningSettlementPrice;
+          const baseSettlement = initialC?.winningSettlementPrice || 100.00;
           const dynamicPrice = Math.round(baseSettlement * Math.pow(0.97, sWins) * Math.pow(1.05, sLosses) * 100) / 100;
 
+          const rating = initialC?.rating || 3.5;
+          const currentPrice = existingC?.currentPrice || initialC?.currentPrice || 2.50;
+          const popularityScore = existingC?.popularityScore || initialC?.popularityScore || 75;
+          const trending = existingC?.trending || initialC?.trending || 'stable';
+          const change24h = existingC?.change24h || initialC?.change24h || 0.0;
+          const availableShares = existingC?.availableShares || initialC?.availableShares || 200000;
+          const totalSharesPurchased = existingC?.totalSharesPurchased || initialC?.totalSharesPurchased || 0;
+          const description = initialC?.description || `Official representative squad of ${apiTeam.name || id} competing in the FIFA World Cup tournament.`;
+
           return {
-            ...existingC,
-            name: initialC.name,
-            flag: initialC.flag,
-            group: apiStats?.group ?? existingC.group,
-            statistics,
+            id,
+            name: apiTeam.name || initialC?.name || id,
+            flag: getFlagEmoji(id),
+            rating,
+            currentPrice,
+            winningSettlementPrice: dynamicPrice,
+            potentialReturn: Math.round((dynamicPrice / currentPrice) * 10) / 10,
+            group: apiStats?.group ?? existingC?.group ?? initialC?.group ?? 'A',
+            ranking: apiTeam.id ? (apiTeam.id % 60) + 1 : (initialC?.ranking || 50),
+            popularityScore,
+            trending,
+            change24h,
+            availableShares,
+            totalSharesPurchased,
             status,
-            winningSettlementPrice: dynamicPrice
+            statistics,
+            description
           };
-        });
+        }).filter(Boolean) as CountryShare[];
       });
 
       // 4. Update schedules, results and match score lists
-      const mapStage = (s: string): 'Group Stage' | 'Round of 16' | 'Quarter-Finals' | 'Semi-Finals' | 'Final' => {
+      const mapStage = (s: string): 'Group Stage' | 'Round of 32' | 'Round of 16' | 'Quarter-Finals' | 'Semi-Finals' | 'Third Place' | 'Final' => {
         const stage = s.toUpperCase();
         if (stage.includes('GROUP')) return 'Group Stage';
+        if (stage.includes('LAST_32') || stage.includes('ROUND_32') || stage.includes('ROUND_OF_32')) return 'Round of 32';
         if (stage.includes('LAST_16') || stage.includes('ROUND_16') || stage.includes('ROUND_OF_16')) return 'Round of 16';
         if (stage.includes('QUARTER')) return 'Quarter-Finals';
         if (stage.includes('SEMI')) return 'Semi-Finals';
+        if (stage.includes('THIRD') || stage.includes('3RD')) return 'Third Place';
         if (stage.includes('FINAL')) return 'Final';
         return 'Group Stage';
       };
@@ -462,14 +545,15 @@ export default function App() {
 
       if (matchesData && Array.isArray(matchesData.matches)) {
         const loadedFixtures: MatchFixture[] = matchesData.matches.map((m: any) => {
-          const homeTla = m.homeTeam?.tla;
-          const awayTla = m.awayTeam?.tla;
-          if (!homeTla || !awayTla) return null;
+          const homeTla = m.homeTeam?.tla?.toUpperCase() || 'TBD';
+          const awayTla = m.awayTeam?.tla?.toUpperCase() || 'TBD';
+          if (homeTla !== 'TBD' && BLACKLISTED_IDS.includes(homeTla)) return null;
+          if (awayTla !== 'TBD' && BLACKLISTED_IDS.includes(awayTla)) return null;
           
           return {
             id: String(m.id),
-            homeTeamId: homeTla.toUpperCase(),
-            awayTeamId: awayTla.toUpperCase(),
+            homeTeamId: homeTla,
+            awayTeamId: awayTla,
             homeScore: (m.score?.fullTime?.home !== undefined && m.score?.fullTime?.home !== null) ? m.score.fullTime.home : null,
             awayScore: (m.score?.fullTime?.away !== undefined && m.score?.fullTime?.away !== null) ? m.score.fullTime.away : null,
             date: m.utcDate ? m.utcDate.slice(0, 10) : '',
@@ -1003,6 +1087,16 @@ export default function App() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
+  const handleScrollToLiveVideo = () => {
+    setActiveRoute('dashboard');
+    setTimeout(() => {
+      const el = document.getElementById('hero-presentation-video');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+  };
+
   if (activeRoute === 'portal-dashboard') {
     return (
       <PortalDashboard
@@ -1063,17 +1157,27 @@ export default function App() {
           <div className="flex items-center justify-between">
             
             {/* Logo brand strictly matched to the screenshot */}
-            <div className="flex flex-col cursor-pointer select-none" onClick={() => setActiveRoute('dashboard')}>
-              <span className="font-bold text-white text-base tracking-wide leading-tight">
-                {t('brand_line1')}
-              </span>
-              <span className="text-sm text-gray-300 tracking-wide leading-tight">
-                {t('brand_line2')}
-              </span>
+            <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={() => setActiveRoute('dashboard')}>
+              <Logo size={42} className="shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-extrabold text-white text-base tracking-wide leading-tight font-display">
+                  {t('brand_line1')} {t('brand_line2')}
+                </span>
+                <span className="text-[10px] text-amber-500 font-bold uppercase tracking-widest font-mono">
+                  Official Trading Platform
+                </span>
+              </div>
             </div>
 
             {/* Desktop Navigation Links - matching professional high-contrast items */}
             <nav className="hidden md:flex items-center space-x-7 text-[13px] font-bold text-gray-400">
+              <button
+                onClick={handleScrollToLiveVideo}
+                className="transition-all duration-200 cursor-pointer text-red-500 font-extrabold flex items-center space-x-1.5 px-3 py-1 bg-red-950/30 border border-red-500/30 rounded-lg hover:bg-red-950/50 hover:border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.15)] hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+              >
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
+                <span className="tracking-wider uppercase">🔴 WATCH LIVE</span>
+              </button>
               <button
                 onClick={() => setActiveRoute('dashboard')}
                 className={`transition-colors cursor-pointer tracking-wider uppercase ${
@@ -1291,6 +1395,13 @@ export default function App() {
         {mobileMenuOpen && (
           <nav className="md:hidden px-4 pt-2 pb-5 border-t border-[#121622] bg-[#090b10] flex flex-col space-y-2.5">
             <button
+              onClick={() => { handleScrollToLiveVideo(); setMobileMenuOpen(false); }}
+              className="py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded text-red-500 bg-red-950/20 border border-red-500/20 flex items-center space-x-2"
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
+              <span>🔴 WATCH LIVE</span>
+            </button>
+            <button
               onClick={() => { setActiveRoute('dashboard'); setMobileMenuOpen(false); }}
               className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded ${
                 activeRoute === 'dashboard' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
@@ -1367,6 +1478,22 @@ export default function App() {
             >
               Governance Panel
             </button>
+
+            {/* Mobile Language Selector */}
+            <div className="py-2.5 px-3 bg-[#111420] rounded border border-white/5 text-left flex flex-col space-y-1">
+              <span className="text-[9px] uppercase tracking-wider font-extrabold text-gray-500 font-mono">Platform Language 🌍</span>
+              <select
+                value={detectedLanguage}
+                onChange={(e) => setDetectedLanguage(e.target.value)}
+                className="bg-transparent text-xs text-white outline-none border-none py-1 font-bold cursor-pointer w-full focus:ring-0"
+              >
+                <option value="English" className="bg-[#111420] text-white">English (US)</option>
+                <option value="العربية (Arabic)" className="bg-[#111420] text-white">العربية (Arabic)</option>
+                <option value="Español (Spanish)" className="bg-[#111420] text-white">Español (Spanish)</option>
+                <option value="Português (Portuguese)" className="bg-[#111420] text-white">Português (Portuguese)</option>
+                <option value="Français (French)" className="bg-[#111420] text-white">Français (French)</option>
+              </select>
+            </div>
           </nav>
         )}
       </header>

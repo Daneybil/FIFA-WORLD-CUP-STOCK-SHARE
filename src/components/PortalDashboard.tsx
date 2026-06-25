@@ -40,6 +40,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { sendPasswordResetEmail, sendEmailVerification, reload } from 'firebase/auth';
 import { getLatestPublicTransactions, getUserNotifications, markNotificationReadInFirestore, clearAllUserNotificationsInFirestore } from '../lib/firebase-service';
 import PurchaseModal from './PurchaseModal';
+import { Logo } from './Logo';
 
 interface PortalDashboardProps {
   currentUser: { email: string; displayName: string; uid: string; emailVerified?: boolean } | null;
@@ -99,7 +100,7 @@ export default function PortalDashboard({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Local verification status and state
-  const [isEmailVerified, setIsEmailVerified] = useState<boolean>(false);
+  const [isEmailVerified, setIsEmailVerified] = useState<boolean>(true);
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
 
@@ -134,6 +135,8 @@ export default function PortalDashboard({
   
   // Selected country to buy
   const [selectedBuyCountry, setSelectedBuyCountry] = useState<CountryShare | null>(null);
+  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(true);
   
   // Live Public Activities
   const [publicActivities, setPublicActivities] = useState<MarketActivity[]>([]);
@@ -155,8 +158,8 @@ export default function PortalDashboard({
   useEffect(() => {
     if (!currentUser) return;
     
-    // Set email verified
-    setIsEmailVerified(!!auth.currentUser?.emailVerified);
+    // Set email verified - Always verified for demo testing as requested
+    setIsEmailVerified(true);
     
     // Load from Firestore users collection
     const loadProfileData = async () => {
@@ -354,13 +357,16 @@ export default function PortalDashboard({
       <aside className="hidden lg:flex flex-col w-64 bg-[#0a0d14] border-r border-[#1a2130] h-full shrink-0 select-none">
         
         {/* Brand Header */}
-        <div className="p-6 border-b border-[#1a2130] flex flex-col">
-          <span className="font-black text-white text-md tracking-wider leading-tight uppercase font-display">
-            WORLD CUP EQUITIES
-          </span>
-          <span className="text-[10px] text-amber-500 font-bold tracking-widest uppercase font-mono mt-1">
-            Professional Portal
-          </span>
+        <div className="p-6 border-b border-[#1a2130] flex items-center space-x-3 select-none">
+          <Logo size={40} className="shrink-0" />
+          <div className="flex flex-col">
+            <span className="font-black text-white text-sm tracking-wider leading-tight uppercase font-display">
+              FIFA World Cup
+            </span>
+            <span className="text-[10px] text-amber-500 font-bold tracking-widest uppercase font-mono">
+              Stock Shares
+            </span>
+          </div>
         </div>
 
         {/* User Mini Profile Block */}
@@ -483,9 +489,9 @@ export default function PortalDashboard({
       <div className="flex-grow flex flex-col h-full overflow-hidden">
         
         {/* Top Header Controls Bar */}
-        <header className="h-16 border-b border-[#1a2130] bg-[#0a0d14]/90 backdrop-blur-md px-6 flex items-center justify-between select-none shrink-0 z-10">
+        <header className="h-16 border-b border-[#1a2130] bg-[#0a0d14]/95 backdrop-blur-md px-6 flex items-center justify-between select-none shrink-0 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3.5">
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 rounded bg-[#101420] border border-[#1e273a] text-gray-400 hover:text-white"
@@ -493,32 +499,100 @@ export default function PortalDashboard({
               <Menu className="w-4.5 h-4.5" />
             </button>
             
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <h2 className="text-xs font-bold uppercase tracking-widest text-[#9ba2b0] font-mono">
-                {sidebarMenuItems.find(i => i.id === activeSubTab)?.label}
-              </h2>
+            {/* Logo and Brand Title on left of header */}
+            <div className="flex items-center space-x-2.5 cursor-pointer" onClick={() => setActiveSubTab('overview')}>
+              <Logo size={32} className="shrink-0" />
+              <span className="font-extrabold text-white text-[13px] sm:text-[14px] tracking-wide leading-tight uppercase font-display bg-gradient-to-r from-white via-gray-100 to-amber-200 bg-clip-text text-transparent">
+                FIFA World Cup Stock Shares
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
+          {/* Center Navigation Links - replica layout */}
+          <nav className="hidden md:flex items-center space-x-6 text-xs font-bold text-gray-400">
+            <button
+              onClick={() => setActiveSubTab('overview')}
+              className={`transition-all duration-250 cursor-pointer tracking-wider uppercase font-display ${
+                activeSubTab === 'overview' ? 'text-[#d4af37] border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+              }`}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => setActiveSubTab('portfolio')}
+              className={`transition-all duration-250 cursor-pointer tracking-wider uppercase font-display ${
+                activeSubTab === 'portfolio' ? 'text-[#d4af37] border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+              }`}
+            >
+              Portfolio
+            </button>
+            <button
+              onClick={() => setActiveSubTab('holdings')}
+              className={`transition-all duration-250 cursor-pointer tracking-wider uppercase font-display ${
+                activeSubTab === 'holdings' ? 'text-[#d4af37] border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+              }`}
+            >
+              Market
+            </button>
+            <button
+              onClick={() => setActiveSubTab('transactions')}
+              className={`transition-all duration-250 cursor-pointer tracking-wider uppercase font-display ${
+                activeSubTab === 'transactions' ? 'text-[#d4af37] border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+              }`}
+            >
+              Transactions
+            </button>
+            <button
+              onClick={() => setActiveSubTab('settings')}
+              className={`transition-all duration-250 cursor-pointer tracking-wider uppercase font-display ${
+                activeSubTab === 'settings' ? 'text-[#d4af37] border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+              }`}
+            >
+              Settings
+            </button>
+          </nav>
+
+          <div className="flex items-center space-x-3">
             
             {/* Quick Guest Route Escape */}
             <button 
               onClick={onNavigateGuest}
-              className="hidden sm:inline-block px-3 py-1.5 bg-[#101420] hover:bg-[#1a2133] border border-[#21293c] rounded-lg text-[10px] text-gray-400 hover:text-white font-bold uppercase tracking-wider transition-all cursor-pointer"
+              className="hidden xl:inline-block px-3 py-1.5 bg-[#101420] hover:bg-[#1a2133] border border-[#21293c] rounded-lg text-[10px] text-gray-400 hover:text-white font-bold uppercase tracking-wider transition-all cursor-pointer"
             >
               ← Guest Landing
             </button>
 
             {/* Quick Balance display */}
-            <div className="flex items-center space-x-2.5 py-1.5 px-3 bg-[#111522] border border-[#21293c] rounded-xl">
-              <Wallet className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">USD Balance:</span>
-              <span className="text-sm font-extrabold text-emerald-400 font-mono">
+            <div className="flex items-center space-x-2 py-1 px-2.5 bg-[#111522] border border-[#21293c] rounded-xl shadow-inner">
+              <Wallet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider hidden sm:inline">USD Balance:</span>
+              <span className="text-xs sm:text-sm font-extrabold text-emerald-400 font-mono">
                 ${userCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
+
+            {/* Quick Add Demo Funds button next to balance */}
+            <button
+              onClick={async () => {
+                try {
+                  await onDepositFunds(5000);
+                } catch (e) {
+                  console.error("Failed to deposit demo funds:", e);
+                }
+              }}
+              className="px-2.5 py-1.5 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/30 hover:border-emerald-500/60 rounded-xl text-[10px] text-emerald-400 hover:text-emerald-300 font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center space-x-1 shadow-md"
+            >
+              <span>+ Add $5K Demo</span>
+            </button>
+
+            {/* Logout button */}
+            <button
+              onClick={onLogOut}
+              className="px-3 py-1.5 bg-red-950/20 hover:bg-red-900/30 border border-red-500/25 hover:border-red-500/50 rounded-xl text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center space-x-1.5 shadow-md"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
 
           </div>
         </header>
@@ -575,23 +649,20 @@ export default function PortalDashboard({
           {activeSubTab === 'overview' && (
             <div className="space-y-6">
               
-              {/* Top Banner */}
-              <div className="bg-gradient-to-r from-[#101422] to-[#07090d] border border-[#20273c] p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
+              {/* Top Welcome Header Bar */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2 pb-4 select-none">
                 <div>
-                  <h1 className="text-xl md:text-2xl font-extrabold text-white font-display tracking-tight">
-                    Welcome back, {userProfile.displayName || 'Investor'}!
+                  <h1 className="text-2xl md:text-3xl font-sans font-extrabold text-[#eec765] tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+                    Welcome back, {userProfile.displayName || 'Ani Odinaka John'}!
                   </h1>
-                  <p className="text-xs text-gray-400 mt-1.5 font-medium">
-                    Account securely synchronized. Monitor real World Cup market assets and trade supported squad equities securely.
-                  </p>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-3.5 w-full sm:w-auto shrink-0">
+                  {/* Gold Buy Shares Button */}
                   <button 
                     onClick={() => setActiveSubTab('holdings')}
-                    className="px-5 py-2.5 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold text-[10px] uppercase tracking-wider rounded-xl hover:from-white hover:to-[#fbbf24] transition-all cursor-pointer flex items-center space-x-1.5"
+                    className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-b from-[#f9d976] via-[#d4af37] to-[#8a640f] text-black font-black text-xs uppercase tracking-widest rounded-lg border-t border-[#ffeb99] border-b-2 border-[#5c4308] shadow-[0_0_20px_rgba(212,175,55,0.45),inset_0_1px_1px_rgba(255,255,255,0.5)] hover:shadow-[0_0_30px_rgba(212,175,55,0.75),inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] active:translate-y-0.5 hover:brightness-110 active:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center space-x-1.5"
                   >
-                    <Coins className="w-3.5 h-3.5" />
                     <span>Buy Shares</span>
                   </button>
                 </div>
@@ -600,106 +671,144 @@ export default function PortalDashboard({
               {/* Bento Grid Analytics */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 
-                {/* Metric 1 */}
-                <div className="bg-[#0c0f17] border border-[#202737] p-5 rounded-2xl shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider font-mono">Total Portfolio Value</span>
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                {/* Metric 1 - TOTAL PORTFOLIO VALUE */}
+                <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(16,185,129,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#10b981]/5 to-transparent blur-xl pointer-events-none" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider font-mono">TOTAL PORTFOLIO VALUE</span>
+                    <TrendingUp className="w-4 h-4 text-[#10b981]" />
                   </div>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black font-mono text-white tracking-tight">
+                  <div className="mt-4">
+                    <span className="text-3xl font-extrabold font-mono text-[#10b981] tracking-tight">
                       ${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
-                    <p className="text-[9px] text-gray-500 mt-1 font-semibold">
-                      Holdings value (${totalHoldingsStockValue.toFixed(2)}) + cash balance
+                    <p className="text-[9px] text-gray-500 mt-1.5 font-semibold">
+                      Equity holdings + cash balance
                     </p>
                   </div>
                 </div>
 
-                {/* Metric 2 */}
-                <div className="bg-[#0c0f17] border border-[#202737] p-5 rounded-2xl shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider font-mono">Available Cash</span>
+                {/* Metric 2 - AVAILABLE CASH */}
+                <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(212,175,55,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#d4af37]/5 to-transparent blur-xl pointer-events-none" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider font-mono">AVAILABLE CASH</span>
                     <Wallet className="w-4 h-4 text-[#d4af37]" />
                   </div>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black font-mono text-white tracking-tight">
-                      ${userCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    <p className="text-[9px] text-gray-500 mt-1 font-semibold">
-                      Fully liquid settlement balance ready for allocation
-                    </p>
+                  <div className="mt-4 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-3xl font-extrabold font-mono text-white tracking-tight">
+                        ${userCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <p className="text-[9px] text-gray-500 mt-1.5 font-semibold">
+                        Fully liquid settlement balance ready for allocation
+                      </p>
+                    </div>
+                    
+                    {/* Golden/Emerald Deposit Button */}
+                    <div className="mt-4">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await onDepositFunds(5000);
+                          } catch (e) {
+                            console.error("Failed to deposit demo funds:", e);
+                          }
+                        }}
+                        className="w-full py-2 bg-gradient-to-b from-[#10b981] via-[#059669] to-[#047857] text-white font-black text-xs uppercase tracking-widest rounded-lg border-t border-[#34d399] border-b-2 border-[#064e3b] shadow-[0_2px_8px_rgba(16,185,129,0.3)] hover:shadow-[0_4px_15px_rgba(16,185,129,0.6)] hover:brightness-110 active:translate-y-0.5 transition-all duration-150 cursor-pointer text-center"
+                      >
+                        Add $5,000 Demo Funds
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Metric 3 */}
-                <div className="bg-[#0c0f17] border border-[#202737] p-5 rounded-2xl shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider font-mono">Potential Winning Payout</span>
-                    <Trophy className="w-4 h-4 text-amber-500" />
+                {/* Metric 3 - POTENTIAL WINNING PAYOUT */}
+                <div className="bg-[#0c0f1a]/95 backdrop-blur-md border-2 border-[#d4af37] p-5 rounded-2xl shadow-[0_10px_35px_rgba(212,175,55,0.15)] hover:shadow-[0_12px_45px_rgba(212,175,55,0.25)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#d4af37]/15 to-transparent blur-xl pointer-events-none" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase font-black text-[#d4af37] tracking-wider font-mono">POTENTIAL WINNING PAYOUT</span>
+                    <Trophy className="w-4 h-4 text-[#d4af37]" />
                   </div>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black font-mono text-amber-400 tracking-tight">
-                      ${totalSettlementPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    <p className="text-[9px] text-gray-500 mt-1 font-semibold">
-                      100% payout projection if owned nations win tournament
-                    </p>
+                  <div className="mt-4 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-3xl font-extrabold font-mono text-amber-400 tracking-tight">
+                        ${totalSettlementPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <p className="text-[9px] text-[#d4af37]/80 mt-1.5 font-semibold">
+                        100% winning projection if owned nations win tournament
+                      </p>
+                    </div>
+                    
+                    {/* Golden Withdrawal Button - Directly Inside the Card, Bold, Golden, No Lock Icon */}
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setIsWithdrawalModalOpen(true)}
+                        className="w-full py-2 bg-gradient-to-b from-[#f9d976] via-[#d4af37] to-[#8a640f] text-black font-black text-xs uppercase tracking-widest rounded-lg border-t border-[#ffeb99] border-b-2 border-[#5c4308] shadow-[0_2px_8px_rgba(212,175,55,0.3)] hover:shadow-[0_4px_15px_rgba(212,175,55,0.6)] hover:brightness-110 active:translate-y-0.5 transition-all duration-150 cursor-pointer text-center"
+                      >
+                        Withdrawal
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Metric 4 */}
-                <div className="bg-[#0c0f17] border border-[#202737] p-5 rounded-2xl shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider font-mono">Active Held Squads</span>
+                {/* Metric 4 - ACTIVE HOLDINGS */}
+                <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(212,175,55,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#3b82f6]/5 to-transparent blur-xl pointer-events-none" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider font-mono">ACTIVE HOLDINGS</span>
                     <Flag className="w-4 h-4 text-blue-400" />
                   </div>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black font-mono text-white tracking-tight">
+                  <div className="mt-4">
+                    <span className="text-3xl font-extrabold font-mono text-white tracking-tight">
                       {activeHoldingsCount}
                     </span>
-                    <p className="text-[9px] text-gray-500 mt-1 font-semibold">
+                    <p className="text-[9px] text-gray-500 mt-1.5 font-semibold">
                       Nations under portfolio asset ownership
                     </p>
                   </div>
                 </div>
 
-                {/* Metric 5 */}
-                <div className="bg-[#0c0f17] border border-[#202737] p-5 rounded-2xl shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider font-mono">Total Transactions</span>
+                {/* Metric 5 - TOTAL TRANSACTIONS */}
+                <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(212,175,55,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-violet-500/5 to-transparent blur-xl pointer-events-none" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider font-mono">TOTAL TRANSACTIONS</span>
                     <History className="w-4 h-4 text-violet-400" />
                   </div>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black font-mono text-white tracking-tight">
+                  <div className="mt-4">
+                    <span className="text-3xl font-extrabold font-mono text-white tracking-tight">
                       {totalTransactionsCount}
                     </span>
-                    <p className="text-[9px] text-gray-500 mt-1 font-semibold">
-                      Real blockchain ledger completed interactions
+                    <p className="text-[9px] text-gray-500 mt-1.5 font-semibold">
+                      Ledger completed interactions
                     </p>
                   </div>
                 </div>
 
-                {/* Metric 6 */}
-                <div className="bg-[#0c0f17] border border-[#202737] p-5 rounded-2xl shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider font-mono">Account Status</span>
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                {/* Metric 6 - ACCOUNT STATUS */}
+                <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(16,185,129,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#10b981]/5 to-transparent blur-xl pointer-events-none" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider font-mono">ACCOUNT STATUS</span>
+                    <ShieldCheck className="w-4 h-4 text-[#10b981]" />
                   </div>
-                  <div className="mt-3">
-                    <span className="text-xl font-black text-white tracking-tight flex items-center gap-1.5">
+                  <div className="mt-4">
+                    <div className="flex items-center">
                       {isEmailVerified ? (
-                        <span className="text-emerald-400 flex items-center gap-1.5 font-display uppercase text-sm">
-                          Verified Profile ✅
+                        <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#10b981]/10 border border-[#10b981]/35 text-[#10b981] text-xs font-black uppercase tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                          <span>VERIFIED</span>
+                          <span className="text-[10px]">✅</span>
                         </span>
                       ) : (
-                        <span className="text-amber-400 flex items-center gap-1.5 font-display uppercase text-sm animate-pulse">
-                          Awaiting Verification ⚠️
+                        <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/35 text-amber-400 text-xs font-black uppercase tracking-wider animate-pulse">
+                          <span>UNVERIFIED</span>
+                          <span className="text-[10px]">⚠️</span>
                         </span>
                       )}
-                    </span>
+                    </div>
                     <p className="text-[9px] text-gray-500 mt-2 font-semibold">
-                      Security status verified by Firebase Auth
+                      Security status active & verified
                     </p>
                   </div>
                 </div>
@@ -761,8 +870,8 @@ export default function PortalDashboard({
                       <p className="text-[11px] text-gray-500 italic py-12 text-center">No upcoming tournament matches scheduled.</p>
                     ) : (
                       fixtures.filter(f => f.status !== 'Finished').slice(0, 4).map((match) => {
-                        const homeTeam = countries.find(c => c.id === match.homeTeamId) || { name: match.homeTeamId, flag: '🏳️' };
-                        const awayTeam = countries.find(c => c.id === match.awayTeamId) || { name: match.awayTeamId, flag: '🏳️' };
+                        const homeTeam = countries.find(c => c.id === match.homeTeamId) || { name: match.homeTeamId === 'TBD' ? 'To Be Decided' : match.homeTeamId, flag: '🏳️' };
+                        const awayTeam = countries.find(c => c.id === match.awayTeamId) || { name: match.awayTeamId === 'TBD' ? 'To Be Decided' : match.awayTeamId, flag: '🏳️' };
                         return (
                           <div key={match.id} className="p-3 bg-[#131724]/70 border border-[#1e2739] rounded-xl flex justify-between items-center text-xs">
                             <div className="flex items-center space-x-2 w-[40%] overflow-hidden">
@@ -796,10 +905,10 @@ export default function PortalDashboard({
                 <div className="flex justify-between items-center pb-4 border-b border-[#1c2234] mb-5">
                   <div>
                     <h3 className="text-base font-extrabold text-white uppercase tracking-wider font-display">Active Equity Holdings</h3>
-                    <p className="text-[11px] text-gray-400 mt-1">Real-time asset valuations dynamically syncing from the Firestore database ledger.</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Official valuations and active squad equities under active contract.</p>
                   </div>
                   <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-lg font-mono font-bold uppercase tracking-wider">
-                    SECURED LEDGER
+                    LIVE ASSETS
                   </span>
                 </div>
 
@@ -1012,7 +1121,7 @@ export default function PortalDashboard({
                 {transactions.length === 0 ? (
                   <div className="p-16 text-center select-none text-gray-500 space-y-4">
                     <History className="w-12 h-12 text-gray-600 mx-auto" />
-                    <p className="text-sm font-semibold">No transactions detected in database ledger.</p>
+                    <p className="text-sm font-semibold">No transactions detected in your portfolio ledger.</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -1185,8 +1294,8 @@ export default function PortalDashboard({
                     <p className="text-xs text-gray-500 text-center py-6 col-span-2">No fixtures returned from football-data API proxy.</p>
                   ) : (
                     fixtures.map((match) => {
-                      const homeTeam = countries.find(c => c.id === match.homeTeamId) || { name: match.homeTeamId, flag: '🏳️' };
-                      const awayTeam = countries.find(c => c.id === match.awayTeamId) || { name: match.awayTeamId, flag: '🏳️' };
+                      const homeTeam = countries.find(c => c.id === match.homeTeamId) || { name: match.homeTeamId === 'TBD' ? 'To Be Decided' : match.homeTeamId, flag: '🏳️' };
+                      const awayTeam = countries.find(c => c.id === match.awayTeamId) || { name: match.awayTeamId === 'TBD' ? 'To Be Decided' : match.awayTeamId, flag: '🏳️' };
                       return (
                         <div key={match.id} className="p-4.5 bg-[#131724]/60 border border-[#21293c] rounded-xl flex flex-col justify-between space-y-3">
                           <div className="flex justify-between items-center text-[10px] text-gray-500 font-mono">
@@ -1236,7 +1345,7 @@ export default function PortalDashboard({
                 <div className="flex justify-between items-center pb-3 border-b border-[#1b2234]">
                   <div>
                     <h3 className="text-sm font-extrabold text-white uppercase tracking-wider font-display">Investor Profile</h3>
-                    <p className="text-[11px] text-gray-400 mt-1">Official authenticated credential status registered in our secure Firestore database.</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Official authenticated credential status registered in our secure system.</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="p-1 px-2.5 bg-amber-500/10 text-[#d4af37] text-[9px] font-black uppercase tracking-wider rounded border border-[#d4af37]/20 font-mono">
@@ -1648,9 +1757,19 @@ export default function PortalDashboard({
                       <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Security Clearances</span>
                       <p className="text-white font-extrabold font-sans text-sm">LEVEL 1 AUTHORIZATION</p>
                     </div>
-                    <div className="p-4 bg-[#111522] border border-[#21293c] rounded-xl space-y-1">
-                      <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Two-Factor Authentication</span>
-                      <p className="text-amber-500 font-extrabold font-sans text-sm">DISABLED</p>
+                    <div className="p-4 bg-[#111522] border border-[#21293c] rounded-xl flex justify-between items-center col-span-1">
+                      <div className="space-y-1">
+                        <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Two-Factor Authentication (2FA)</span>
+                        <p className={`font-extrabold font-sans text-sm ${is2FAEnabled ? 'text-emerald-400' : 'text-amber-500'}`}>
+                          {is2FAEnabled ? 'ENABLED' : 'DISABLED'}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setIs2FAEnabled(!is2FAEnabled)}
+                        className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/30 text-[#d4af37] text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                      >
+                        {is2FAEnabled ? "Disable" : "Enable"}
+                      </button>
                     </div>
                     <div className="p-4 bg-[#111522] border border-[#21293c] rounded-xl space-y-1">
                       <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Encryption Protocol</span>
@@ -1913,6 +2032,53 @@ export default function PortalDashboard({
             setSelectedBuyCountry(null);
           }}
         />
+      )}
+
+      {/* ================= WITHDRAWAL LOCKED POPUP MODAL ================= */}
+      {isWithdrawalModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-gradient-to-br from-[#0c0f19] to-[#04060b] border-2 border-[#d4af37]/60 rounded-3xl p-6 md:p-8 shadow-[0_0_50px_rgba(212,175,55,0.25)] overflow-hidden select-none">
+            
+            {/* Top decorative glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-2 bg-[#d4af37]/20 rounded-full blur-md" />
+            
+            <div className="flex flex-col items-center text-center space-y-6">
+              
+              {/* Premium Trophy Icon */}
+              <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-b from-[#fce498]/10 to-[#92640f]/5 border border-[#d4af37]/30 shadow-[0_10px_25px_rgba(0,0,0,0.5)] text-[#d4af37]">
+                <Trophy className="w-10 h-10" />
+              </div>
+
+              {/* Modal Text Content */}
+              <div className="space-y-3.5">
+                <h3 className="text-xl md:text-2xl font-sans font-extrabold text-[#eec765] tracking-tight">
+                  Withdrawal Locked
+                </h3>
+                
+                <div className="space-y-4 text-xs md:text-sm text-gray-300 leading-relaxed font-sans">
+                  <p className="font-medium">
+                    You cannot withdraw funds at this time. All shares must be held until the FIFA World Cup tournament officially concludes.
+                  </p>
+                  <p className="font-medium text-gray-400">
+                    If your selected country wins the World Cup, your shares will be settled at the winning price and you can withdraw your earnings immediately and securely.
+                  </p>
+                  <p className="text-[#d4af37] font-semibold text-[11px] md:text-xs tracking-wide">
+                    Thank you for your understanding.
+                  </p>
+                </div>
+              </div>
+
+              {/* Premium Gold Understood Dismiss Button */}
+              <button
+                onClick={() => setIsWithdrawalModalOpen(false)}
+                className="w-full py-3 bg-gradient-to-b from-[#f9d976] via-[#d4af37] to-[#8a640f] text-black font-black text-xs uppercase tracking-widest rounded-xl border-t border-[#ffeb99] border-b-2 border-[#5c4308] shadow-[0_4px_12px_rgba(212,175,55,0.3)] hover:shadow-[0_6px_20px_rgba(212,175,55,0.5)] active:translate-y-0.5 hover:brightness-110 transition-all duration-200 cursor-pointer"
+              >
+                Understood
+              </button>
+
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

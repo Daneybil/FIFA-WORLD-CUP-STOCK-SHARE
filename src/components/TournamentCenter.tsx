@@ -65,6 +65,24 @@ export default function TournamentCenter({
   
   // Find country objects
   const getCountry = (teamId: string) => {
+    if (teamId === 'TBD') {
+      return {
+        id: 'TBD',
+        name: 'To Be Decided',
+        flag: '🏳️',
+        currentPrice: 0.00,
+        winningSettlementPrice: 0,
+        potentialReturn: 0,
+        group: 'A',
+        ranking: 0,
+        popularityScore: 0,
+        trending: 'stable' as const,
+        change24h: 0,
+        availableShares: 0,
+        statistics: { wins: 0, draws: 0, losses: 0, goalsScored: 0, goalsConceded: 0, matchesPlayed: 0 },
+        description: 'Team TBD'
+      };
+    }
     return countries.find((c) => c.id === teamId);
   };
 
@@ -513,67 +531,112 @@ export default function TournamentCenter({
               <div className="grid grid-cols-3 gap-4 text-center relative">
                 
                 {/* Quarter Finals */}
-                <div className="space-y-8 relative">
+                <div className="space-y-4 relative flex flex-col justify-center">
                   <span className="text-[10px] font-mono font-black text-gray-500 uppercase tracking-wider block">Quarter-Finals</span>
-                  
-                  {/* Bracket block 1 */}
-                  <div className="space-y-2.5 bg-[#171c2b] p-3 rounded-lg border border-[#2a3449] max-w-xs mx-auto text-xs text-left">
-                    <div className="flex justify-between text-white font-semibold font-mono border-b border-[#212a3d] pb-1.5 mb-1.5">
-                      <span>🇧🇷 Brazil</span>
-                      <span>2</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400 font-mono">
-                      <span>🇩🇪 Germany</span>
-                      <span>1</span>
-                    </div>
-                  </div>
-
-                  {/* Bracket block 2 */}
-                  <div className="space-y-2.5 bg-[#171c2b] p-3 rounded-lg border border-[#2a3449] max-w-xs mx-auto text-xs text-left">
-                    <div className="flex justify-between text-white font-semibold font-mono border-b border-[#212a3d] pb-1.5 mb-1.5">
-                      <span>🇦🇷 Argentina</span>
-                      <span>3</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400 font-mono">
-                      <span>🇳🇱 Netherlands</span>
-                      <span>0</span>
-                    </div>
-                  </div>
+                  {(() => {
+                    const qfMatches = fixtures.filter(f => f.stage === 'Quarter-Finals');
+                    if (qfMatches.length === 0) {
+                      return <p className="text-xs text-gray-500 italic py-4">Awaiting Quarter-Finalists...</p>;
+                    }
+                    return qfMatches.slice(0, 4).map(f => {
+                      const home = getCountry(f.homeTeamId);
+                      const away = getCountry(f.awayTeamId);
+                      return (
+                        <div key={f.id} className="space-y-2 bg-[#171c2b] p-3 rounded-lg border border-[#2a3449] max-w-xs w-full mx-auto text-xs text-left">
+                          <div className="flex justify-between items-center text-[9px] text-gray-500 font-mono mb-1 border-b border-[#212a3d] pb-1">
+                            <span>QF ID: {f.id}</span>
+                            <span>{f.date}</span>
+                          </div>
+                          <div className="flex justify-between text-white font-semibold font-mono">
+                            <span className="truncate">{home?.flag} {home?.name || f.homeTeamId}</span>
+                            <span>{f.homeScore !== null ? f.homeScore : '—'}</span>
+                          </div>
+                          <div className="flex justify-between text-gray-400 font-mono">
+                            <span className="truncate">{away?.flag} {away?.name || f.awayTeamId}</span>
+                            <span>{f.awayScore !== null ? f.awayScore : '—'}</span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
 
                 {/* Semi-Finals link */}
-                <div className="space-y-16 relative flex flex-col justify-center">
-                  <span className="text-[10px] font-mono font-black text-gray-500 uppercase tracking-wider block mb-4">Semi-Finals</span>
-
-                  {/* Node */}
-                  <div className="space-y-2.5 bg-[#1a233b] p-4 rounded-lg border border-[#d4af37]/35 max-w-xs w-full mx-auto text-xs text-left">
-                    <div className="flex justify-between text-[#d4af37] font-bold font-mono border-b border-[#2a3452] pb-1.5 mb-1.5 flex-row">
-                      <span>🇧🇷 Brazil Shares</span>
-                      <span className="text-[10px] text-gray-500 px-1 bg-black rounded">QUALIFIED</span>
-                    </div>
-                    <div className="flex justify-between text-white font-mono">
-                      <span>🇦🇷 Argentina Shares</span>
-                      <span className="text-gray-500 text-[10px]">TBD</span>
-                    </div>
-                  </div>
+                <div className="space-y-4 relative flex flex-col justify-center">
+                  <span className="text-[10px] font-mono font-black text-gray-500 uppercase tracking-wider block">Semi-Finals</span>
+                  {(() => {
+                    const sfMatches = fixtures.filter(f => f.stage === 'Semi-Finals');
+                    if (sfMatches.length === 0) {
+                      return <p className="text-xs text-gray-500 italic py-4">Awaiting Semi-Finalists...</p>;
+                    }
+                    return sfMatches.slice(0, 2).map(f => {
+                      const home = getCountry(f.homeTeamId);
+                      const away = getCountry(f.awayTeamId);
+                      return (
+                        <div key={f.id} className="space-y-2 bg-[#1a233b] p-3 rounded-lg border border-[#d4af37]/35 max-w-xs w-full mx-auto text-xs text-left">
+                          <div className="flex justify-between items-center text-[9px] text-gray-500 font-mono mb-1 border-b border-[#2a3452] pb-1">
+                            <span>SF ID: {f.id}</span>
+                            <span>{f.date}</span>
+                          </div>
+                          <div className="flex justify-between text-[#d4af37] font-semibold font-mono">
+                            <span className="truncate">{home?.flag} {home?.name || f.homeTeamId}</span>
+                            <span>{f.homeScore !== null ? f.homeScore : '—'}</span>
+                          </div>
+                          <div className="flex justify-between text-white font-mono">
+                            <span className="truncate">{away?.flag} {away?.name || f.awayTeamId}</span>
+                            <span>{f.awayScore !== null ? f.awayScore : '—'}</span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
 
                 {/* GRAND FINAL */}
-                <div className="space-y-8 relative flex flex-col justify-center items-center">
+                <div className="space-y-4 relative flex flex-col justify-center items-center">
                   <span className="text-[10px] font-mono font-black text-[#d4af37] tracking-widest uppercase flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5" /> GRAND CUP FINAL
                   </span>
                   
-                  {/* Cup graphic */}
-                  <div className="text-center p-6 bg-gradient-to-b from-[#1c2235] to-[#121622] rounded-xl border border-[#d4af37]/60 max-w-xs w-full">
-                    <Trophy className="w-12 h-12 text-[#d4af37] mx-auto animate-bounce mb-3.5" />
-                    <p className="text-xs uppercase font-extrabold text-white tracking-widest">WORLD CUP FINALS</p>
-                    <p className="text-[10px] text-gray-500 font-mono mt-1">July 19, 2026 ⏤ MetLife Arena</p>
-                    
-                    <div className="mt-4 p-2.5 bg-black rounded text-[10px] font-mono text-gray-400 uppercase tracking-wider">
-                      Winner settlements: <span className="text-[#d4af37] font-bold">$110.00 / $120.00 / $150.00</span> per pre-set prices
-                    </div>
-                  </div>
+                  {(() => {
+                    const finalMatch = fixtures.find(f => f.stage === 'Final');
+                    if (!finalMatch) {
+                      return (
+                        <div className="text-center p-6 bg-gradient-to-b from-[#1c2235] to-[#121622] rounded-xl border border-[#d4af37]/60 max-w-xs w-full">
+                          <Trophy className="w-12 h-12 text-[#d4af37] mx-auto animate-bounce mb-3.5" />
+                          <p className="text-xs uppercase font-extrabold text-white tracking-widest">WORLD CUP FINALS</p>
+                          <p className="text-[10px] text-gray-500 font-mono mt-1">July 19, 2026 ⏤ MetLife Arena</p>
+                          <div className="mt-4 p-2.5 bg-black rounded text-[10px] font-mono text-gray-400 uppercase tracking-wider">
+                            Awaiting Grand Finalists...
+                          </div>
+                        </div>
+                      );
+                    }
+                    const home = getCountry(finalMatch.homeTeamId);
+                    const away = getCountry(finalMatch.awayTeamId);
+                    return (
+                      <div className="text-center p-6 bg-gradient-to-b from-[#1c2235] to-[#121622] rounded-xl border border-[#d4af37]/60 max-w-xs w-full">
+                        <Trophy className="w-12 h-12 text-[#d4af37] mx-auto animate-bounce mb-3.5" />
+                        <p className="text-xs uppercase font-extrabold text-white tracking-widest">WORLD CUP FINALS</p>
+                        <p className="text-[10px] text-gray-500 font-mono mt-1">{finalMatch.date} ⏤ MetLife Arena</p>
+                        
+                        <div className="my-4 p-3 bg-black/40 rounded-lg space-y-2 text-left">
+                          <div className="flex justify-between items-center text-xs font-bold text-white">
+                            <span className="truncate">{home?.flag} {home?.name || finalMatch.homeTeamId}</span>
+                            <span className="font-mono text-sm">{finalMatch.homeScore !== null ? finalMatch.homeScore : '—'}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs font-bold text-white">
+                            <span className="truncate">{away?.flag} {away?.name || finalMatch.awayTeamId}</span>
+                            <span className="font-mono text-sm">{finalMatch.awayScore !== null ? finalMatch.awayScore : '—'}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="p-2.5 bg-black rounded text-[10px] font-mono text-gray-400 uppercase tracking-wider">
+                          Winner settlements: <span className="text-[#d4af37] font-bold font-mono">Payout settled dynamically</span> per active rules
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
               </div>
