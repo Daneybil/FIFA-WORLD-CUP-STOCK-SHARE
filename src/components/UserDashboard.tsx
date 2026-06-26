@@ -12,6 +12,7 @@ interface UserDashboardProps {
   countries: CountryShare[];
   fixtures?: MatchFixture[];
   onDepositFunds?: (amount: number) => Promise<void>;
+  onSellHolding?: (holding: ShareHolding, marketPrice: number) => void;
 }
 
 export default function UserDashboard({
@@ -23,7 +24,8 @@ export default function UserDashboard({
   userCash,
   countries,
   fixtures = [],
-  onDepositFunds
+  onDepositFunds,
+  onSellHolding
 }: UserDashboardProps) {
 
   // Dynamic Portfolio Calculations
@@ -204,6 +206,7 @@ export default function UserDashboard({
                         <th className="py-4 px-4 text-right">Capital Allocated</th>
                         <th className="py-4 px-4 text-right">Current Valuation</th>
                         <th className="py-4 px-5 text-right">Winning Payout (100%)</th>
+                        <th className="py-4 px-5 text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1b2232] text-white">
@@ -252,6 +255,15 @@ export default function UserDashboard({
                             <td className="py-4 px-5 text-right">
                               <div className="text-amber-500 font-bold">${h.winningSettlementPrice.toFixed(2)}</div>
                               <div className="text-[9px] text-[#8e97a8] mt-0.5">Payout: ${(h.sharesQuantity * h.winningSettlementPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                            </td>
+                            <td className="py-4 px-5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => onSellHolding?.(h, currPrice)}
+                                className="px-3 py-1 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95"
+                              >
+                                Sell
+                              </button>
                             </td>
                           </tr>
                         );

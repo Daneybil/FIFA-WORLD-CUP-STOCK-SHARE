@@ -21,6 +21,18 @@ export interface UserProfile {
   displayName: string;
   balance: number;
   totalInvested: number;
+  referralCode?: string;
+  referredBy?: string;
+  referralWallet?: number;
+  referralCount?: number;
+  referralEarnings?: number;
+}
+
+function generateReferralCode(uid: string): string {
+  const cleanUid = uid.replace(/[^a-zA-Z0-9]/g, '');
+  const prefix = cleanUid.slice(0, 3).toUpperCase() || 'WCS';
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
+  return `${prefix}${randomSuffix}`;
 }
 
 // 1. Fetch or create a user profile in Firestore
@@ -34,17 +46,68 @@ export async function getOrCreateUserProfile(uid: string, email: string, display
       data.balance = 5000.00;
       await updateDoc(userDocRef, { balance: 5000.00 });
     }
+    
+    // Auto-generate referral code for existing users if missing
+    if (!data.referralCode) {
+      const code = generateReferralCode(uid);
+      const updates = {
+        referralCode: code,
+        referralWallet: data.referralWallet ?? 0,
+        referralCount: data.referralCount ?? 0,
+        referralEarnings: data.referralEarnings ?? 0
+      };
+      await updateDoc(userDocRef, updates);
+      return {
+        ...data,
+        ...updates
+      };
+    }
+    
     return data;
   } else {
+    // Read pending referral code from session storage (handles both link-based and manual input)
+    let referralCodeUsed = '';
+    if (typeof window !== 'undefined') {
+      referralCodeUsed = sessionStorage.getItem('pending_referral_code') || '';
+    }
+
+    const code = generateReferralCode(uid);
+    let referredByUid = '';
+
+    if (referralCodeUsed) {
+      const q = query(collection(db, 'users'), where('referralCode', '==', referralCodeUsed.trim().toUpperCase()));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const referrerDoc = snap.docs[0];
+        if (referrerDoc.id !== uid) {
+          referredByUid = referrerDoc.id;
+        }
+      }
+    }
+
     const defaultProfile: UserProfile = {
       uid,
       email,
       displayName: displayName || email.split('@')[0],
       balance: 5000.00, // Starts at $5,000.00 for demo/testing purposes as requested
-      totalInvested: 0
+      totalInvested: 0,
+      referralCode: code,
+      referralWallet: 0,
+      referralCount: 0,
+      referralEarnings: 0
     };
+
+    if (referredByUid) {
+      defaultProfile.referredBy = referredByUid;
+    }
+
     await setDoc(userDocRef, defaultProfile);
     
+    // Clear the pending referral code after successful sign up
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('pending_referral_code');
+    }
+
     // Welcome Notification
     await createNotification(uid, {
       title: "Welcome to World Cup Equities",
@@ -84,98 +147,103 @@ export async function createPaymentSession(userId: string, data: {
 
 // 3. Confirm Payment and Atopically execute Holdings & Transactions Records in Firestore
 export async function verifyAndProcessPayment(userId: string, paymentId: string): Promise<boolean> {
-  const paymentRef = doc(db, 'payments', paymentId);
-  const paySnap = await getDoc(paymentRef);
-  
-  if (!paySnap.exists()) {
-    throw new Error("Payment record not found");
+  try {
+    const response = await fetch('/api/payments/verify-crypto', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId, paymentId })
+    });
+    
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || "Failed to verify crypto payment.");
+    }
+    
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    console.error("verifyAndProcessPayment error:", error);
+    throw error;
+  }
+}
+
+// 3B. Sell / Liquidate shares in Firestore
+export async function sellSharesInFirestore(
+  userId: string,
+  countryId: string,
+  sharesToSell: number,
+  marketPrice: number
+): Promise<boolean> {
+  const holdingId = `${userId}_${countryId}`;
+  const holdingRef = doc(db, 'holdings', holdingId);
+  const holdingSnap = await getDoc(holdingRef);
+
+  if (!holdingSnap.exists()) {
+    throw new Error("You do not hold any active equity for this country.");
   }
 
-  const payment = paySnap.data();
-  if (payment.status !== 'Pending') {
-    return payment.status === 'Completed';
+  const holding = holdingSnap.data() as ShareHolding;
+  if (holding.sharesQuantity < sharesToSell) {
+    throw new Error("Insufficient shares quantity to execute this liquidation.");
   }
 
-  // Atomically update holdings, create transaction, update user balance & total invested
   const batch = writeBatch(db);
-  
-  // A. Mark payment completed
-  batch.update(paymentRef, { status: 'Completed' });
+  const creditAmount = sharesToSell * marketPrice;
 
-  // B. Create Transaction record
-  const txId = 'TX-' + Math.floor(10000000 + Math.random() * 90000000);
+  // A. Update or Delete holding
+  const remainingShares = holding.sharesQuantity - sharesToSell;
+  if (remainingShares < 0.0001) {
+    batch.delete(holdingRef);
+  } else {
+    const remainingInvested = Math.max(0, holding.amountInvested - (sharesToSell * holding.averagePurchasePrice));
+    batch.update(holdingRef, {
+      sharesQuantity: remainingShares,
+      amountInvested: remainingInvested,
+      potentialWinningValue: remainingShares * holding.winningSettlementPrice,
+      purchaseDate: new Date().toISOString()
+    });
+  }
+
+  // B. Credit user's wallet balance
+  const userRef = doc(db, 'users', userId);
+  batch.update(userRef, {
+    balance: increment(creditAmount),
+    totalInvested: increment(-creditAmount)
+  });
+
+  // C. Create Transaction record
+  const txId = 'TX-SELL-' + Math.floor(10000000 + Math.random() * 90000000);
   const txDocRef = doc(db, 'transactions', txId);
   const transaction: TransactionRecord = {
     id: txId,
     date: new Date().toISOString(),
-    countryId: payment.countryId,
-    countryName: payment.countryName,
-    flag: payment.flag,
-    amountInvested: payment.amount,
-    sharesQuantity: payment.sharesQuantity,
-    pricePerShare: payment.pricePerShare,
-    paymentMethod: payment.paymentMethod,
+    countryId: holding.countryId,
+    countryName: holding.countryName,
+    flag: holding.flag,
+    amountInvested: -creditAmount, // negative for selling/redeeming
+    sharesQuantity: -sharesToSell, // negative to show selling
+    pricePerShare: marketPrice,
+    paymentMethod: 'USDT', // simulated refund method
     status: 'Completed',
     txHash: '0x' + Array.from({length:40}, () => Math.floor(Math.random()*16).toString(16)).join('')
   };
   batch.set(txDocRef, { ...transaction, userId });
 
-  // C. Update or Create Holdings
-  const holdingId = `${userId}_${payment.countryId}`;
-  const holdingRef = doc(db, 'holdings', holdingId);
-  const holdingSnap = await getDoc(holdingRef);
-
-  if (holdingSnap.exists()) {
-    const existingHolding = holdingSnap.data() as ShareHolding;
-    const newSharesQuantity = existingHolding.sharesQuantity + payment.sharesQuantity;
-    const newAmountInvested = existingHolding.amountInvested + payment.amount;
-    const newAveragePrice = Number((newAmountInvested / newSharesQuantity).toFixed(4));
-    
-    batch.update(holdingRef, {
-      sharesQuantity: newSharesQuantity,
-      amountInvested: newAmountInvested,
-      averagePurchasePrice: newAveragePrice,
-      potentialWinningValue: newSharesQuantity * payment.winningSettlementPrice,
-      purchaseDate: new Date().toISOString()
-    });
-  } else {
-    const newHolding: ShareHolding = {
-      id: holdingId,
-      countryId: payment.countryId,
-      countryName: payment.countryName,
-      flag: payment.flag,
-      sharesQuantity: payment.sharesQuantity,
-      averagePurchasePrice: payment.pricePerShare,
-      amountInvested: payment.amount,
-      winningSettlementPrice: payment.winningSettlementPrice,
-      potentialWinningValue: payment.sharesQuantity * payment.winningSettlementPrice,
-      purchaseDate: new Date().toISOString(),
-      status: 'Active'
-    };
-    batch.set(holdingRef, { ...newHolding, userId });
-  }
-
-  // D. Update User Balance & Total Invested
-  const userRef = doc(db, 'users', userId);
-  batch.update(userRef, {
-    balance: increment(-payment.amount),
-    totalInvested: increment(payment.amount)
-  });
-
-  // E. Add User Notification
+  // D. Create notification
   const notifId = 'NOTIF-' + Math.floor(100000 + Math.random() * 900000);
   const notifRef = doc(db, 'notifications', notifId);
   batch.set(notifRef, {
     id: notifId,
     userId,
-    title: `Purchase Confirmed: ${payment.countryName}`,
-    message: `Payment Verified via CryptoMUS. Allocated $${payment.amount.toFixed(2)} for ${payment.sharesQuantity.toFixed(4)} shares.`,
+    title: `Liquidation Confirmed: ${holding.countryName}`,
+    message: `Successfully liquidated ${sharesToSell.toFixed(4)} shares at $${marketPrice.toFixed(2)} / share. $${creditAmount.toFixed(2)} USD credited to escrow balance.`,
     type: 'success',
     timestamp: new Date().toLocaleString(),
     read: false
   });
 
-  // Commit batch
   await batch.commit();
   return true;
 }
@@ -287,5 +355,35 @@ export async function getLatestPublicTransactions(): Promise<TransactionRecord[]
   } catch (err) {
     console.error("Error retrieving public transactions:", err);
     return [];
+  }
+}
+
+// 12. Submit Support Ticket securely to the backend
+export async function createSupportTicket(userId: string, ticketData: {
+  fullName: string;
+  email: string;
+  subject: string;
+  message: string;
+  screenshot?: string; // base64 encoded
+}): Promise<string> {
+  try {
+    const response = await fetch('/api/support/ticket', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId, ...ticketData })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || "Failed to submit support ticket.");
+    }
+
+    const data = await response.json();
+    return data.ticketId;
+  } catch (error) {
+    console.error("createSupportTicket error:", error);
+    throw error;
   }
 }

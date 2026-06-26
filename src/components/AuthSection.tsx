@@ -21,6 +21,12 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [referralCode, setReferralCode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('pending_referral_code') || '';
+    }
+    return '';
+  });
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -79,6 +85,10 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
     setLoading(true);
     try {
       if (isSignUp) {
+        // Save the typed referral code in sessionStorage so it is picked up by getOrCreateUserProfile
+        if (referralCode) {
+          sessionStorage.setItem('pending_referral_code', referralCode.trim().toUpperCase());
+        }
         // Register user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, {
@@ -297,6 +307,22 @@ export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="e.g. John Doe"
                     className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium"
+                  />
+                </div>
+              </div>
+            )}
+
+            {isSignUp && (
+              <div className="space-y-1">
+                <label className="block text-[11px] uppercase tracking-wider font-extrabold text-gray-400 text-left">Referral Code (Optional)</label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. USERCODE"
+                    className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium uppercase font-mono"
                   />
                 </div>
               </div>

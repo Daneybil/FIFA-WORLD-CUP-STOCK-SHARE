@@ -33,13 +33,20 @@ import {
   HelpCircle,
   Database,
   Bell,
-  ArrowLeft
+  ArrowLeft,
+  Users,
+  Copy,
+  Gift,
+  Ticket,
+  ExternalLink,
+  Upload
 } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { sendPasswordResetEmail, sendEmailVerification, reload } from 'firebase/auth';
-import { getLatestPublicTransactions, getUserNotifications, markNotificationReadInFirestore, clearAllUserNotificationsInFirestore } from '../lib/firebase-service';
+import { getLatestPublicTransactions, getUserNotifications, markNotificationReadInFirestore, clearAllUserNotificationsInFirestore, createSupportTicket } from '../lib/firebase-service';
 import PurchaseModal from './PurchaseModal';
+import SellModal from './SellModal';
 import { Logo } from './Logo';
 
 interface PortalDashboardProps {
@@ -93,7 +100,7 @@ export default function PortalDashboard({
 }: PortalDashboardProps) {
   // Navigation tabs state
   const [activeSubTab, setActiveSubTab] = useState<
-    'overview' | 'portfolio' | 'holdings' | 'transactions' | 'notifications' | 'security' | 'activity' | 'teams' | 'football-data' | 'profile' | 'settings'
+    'overview' | 'portfolio' | 'holdings' | 'transactions' | 'notifications' | 'security' | 'activity' | 'teams' | 'football-data' | 'profile' | 'settings' | 'referrals' | 'support'
   >('overview');
   
   // Mobile sidebar drawer
@@ -110,15 +117,45 @@ export default function PortalDashboard({
     username: string;
     phoneNumber: string;
     createdAt?: string;
+    referralCode?: string;
+    referredBy?: string;
+    referralWallet?: number;
+    referralCount?: number;
+    referralEarnings?: number;
   }>({
     displayName: currentUser?.displayName || '',
     username: '',
     phoneNumber: '',
-    createdAt: ''
+    createdAt: '',
+    referralCode: '',
+    referralWallet: 0,
+    referralCount: 0,
+    referralEarnings: 0
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
   const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
+
+  // Copy status feedback states
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Support ticket form states
+  const [supportFullName, setSupportFullName] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportScreenshot, setSupportScreenshot] = useState<string | null>(null);
+  const [supportScreenshotName, setSupportScreenshotName] = useState<string | null>(null);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportSuccess, setSupportSuccess] = useState<{ ticketId: string; message: string } | null>(null);
+  const [supportError, setSupportError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  // Referral withdrawal states
+  const [withdrawSuccess, setWithdrawSuccess] = useState<string | null>(null);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
 
   // Notifications state
   const [localNotifications, setLocalNotifications] = useState<AppNotification[]>([]);
@@ -135,6 +172,7 @@ export default function PortalDashboard({
   
   // Selected country to buy
   const [selectedBuyCountry, setSelectedBuyCountry] = useState<CountryShare | null>(null);
+  const [selectedSellHolding, setSelectedSellHolding] = useState<{ holding: ShareHolding; marketPrice: number } | null>(null);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [is2FAEnabled, setIs2FAEnabled] = useState(true);
   
@@ -172,14 +210,23 @@ export default function PortalDashboard({
             displayName: data.displayName || currentUser.displayName || '',
             username: data.username || currentUser.email.split('@')[0] || '',
             phoneNumber: data.phoneNumber || '',
-            createdAt: data.createdAt || new Date().toLocaleDateString()
+            createdAt: data.createdAt || new Date().toLocaleDateString(),
+            referralCode: data.referralCode || '',
+            referredBy: data.referredBy || '',
+            referralWallet: data.referralWallet || 0,
+            referralCount: data.referralCount || 0,
+            referralEarnings: data.referralEarnings || 0
           });
         } else {
           setUserProfile({
             displayName: currentUser.displayName || '',
             username: currentUser.email.split('@')[0] || '',
             phoneNumber: '',
-            createdAt: new Date().toLocaleDateString()
+            createdAt: new Date().toLocaleDateString(),
+            referralCode: '',
+            referralWallet: 0,
+            referralCount: 0,
+            referralEarnings: 0
           });
         }
       } catch (err) {
@@ -199,7 +246,17 @@ export default function PortalDashboard({
     loadProfileData();
     loadNotifications();
     loadPublicTransactions();
-  }, [currentUser]);
+  }, [currentUser, activeSubTab]);
+
+  // Prefill Support form details
+  useEffect(() => {
+    if (currentUser) {
+      setSupportEmail(currentUser.email || '');
+    }
+    if (userProfile && userProfile.displayName) {
+      setSupportFullName(userProfile.displayName);
+    }
+  }, [currentUser, userProfile.displayName]);
 
   const handleMarkNotificationRead = async (id: string) => {
     try {
@@ -324,6 +381,53 @@ export default function PortalDashboard({
     }
   };
 
+  // Drag-and-drop / File upload helpers for support ticket
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      processFile(file);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      processFile(file);
+    }
+  };
+
+  const processFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert("Invalid file type: Please select an image file (PNG/JPG).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File is too large! Please select an image under 5MB.");
+      return;
+    }
+    
+    setSupportScreenshotName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSupportScreenshot(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Calculated stats for portfolio summary
   const totalHoldingsStockValue = holdings.reduce((sum, h) => {
     const countryLatest = countries.find(c => c.id === h.countryId);
@@ -341,6 +445,8 @@ export default function PortalDashboard({
     { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
     { id: 'holdings', label: 'Share Holdings', icon: Coins },
     { id: 'transactions', label: 'Transaction History', icon: History },
+    { id: 'referrals', label: 'Refer & Earn', icon: Users },
+    { id: 'support', label: 'Support Center', icon: HelpCircle },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: ShieldCheck },
     { id: 'activity', label: 'Market Activity', icon: Activity },
@@ -934,6 +1040,7 @@ export default function PortalDashboard({
                           <th className="py-4 px-5 text-right">Capital Allocated</th>
                           <th className="py-4 px-5 text-right">Current Valuation</th>
                           <th className="py-4 px-5 text-right">Winning Payout Projection</th>
+                          <th className="py-4 px-5 text-center">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#1b2232] text-white font-mono">
@@ -982,6 +1089,14 @@ export default function PortalDashboard({
                               <td className="py-4 px-5 text-right">
                                 <div className="text-amber-500 font-bold">${h.winningSettlementPrice.toFixed(2)}</div>
                                 <div className="text-[9px] text-[#8e97a8] mt-0.5">Total: ${(h.sharesQuantity * h.winningSettlementPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                              </td>
+                              <td className="py-4 px-5 text-center">
+                                <button
+                                  onClick={() => setSelectedSellHolding({ holding: h, marketPrice: currPrice })}
+                                  className="px-3 py-1.5 bg-gradient-to-br from-red-500/10 via-red-600/15 to-red-800/10 hover:from-red-600 hover:to-red-800 text-red-400 hover:text-white border border-red-500/25 hover:border-red-500/50 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-md active:translate-y-0.5"
+                                >
+                                  Liquidate
+                                </button>
                               </td>
                             </tr>
                           );
@@ -2016,6 +2131,455 @@ export default function PortalDashboard({
             </div>
           )}
 
+          {/* ================= SUBTAB: REFERRALS ================= */}
+          {activeSubTab === 'referrals' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="bg-[#0c0f17] p-6 rounded-2xl border border-[#202737] shadow-xl space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-extrabold text-white uppercase tracking-wider font-display flex items-center gap-2">
+                      <Gift className="w-5 h-5 text-[#d4af37]" />
+                      Refer & Earn Program
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-1 font-medium">
+                      Invite fellow investors to join World Cup Equities. Earn a 15% bonus on their first successful investment!
+                    </p>
+                  </div>
+                  <span className="text-[10px] bg-amber-500/10 border border-amber-500/30 text-[#d4af37] px-3 py-1.5 rounded-full uppercase font-extrabold self-start md:self-auto tracking-wider">
+                    15% Commission 🎁
+                  </span>
+                </div>
+
+                {/* Referral Link & Code Copy Area */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[#1c2335]">
+                  <div className="bg-[#121622] p-4.5 rounded-xl border border-[#21293c] space-y-3">
+                    <span className="text-[10px] font-extrabold text-[#d4af37] uppercase tracking-wider block text-left">Your Unique Referral Code</span>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-[#080a10] border border-white/10 px-4 py-3 rounded-lg text-sm font-mono font-black text-white flex-grow tracking-widest text-center select-all">
+                        {userProfile.referralCode || 'WCS-PENDING'}
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (userProfile.referralCode) {
+                            navigator.clipboard.writeText(userProfile.referralCode);
+                            setCopiedCode(true);
+                            setTimeout(() => setCopiedCode(false), 2000);
+                          }
+                        }}
+                        className="bg-[#1c2335] hover:bg-[#d4af37] hover:text-black border border-white/10 px-4 py-3.5 rounded-lg text-xs font-bold text-white transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copiedCode ? 'COPIED' : 'COPY'}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-500 text-left">Share this code with new users to enter during registration.</p>
+                  </div>
+
+                  <div className="bg-[#121622] p-4.5 rounded-xl border border-[#21293c] space-y-3">
+                    <span className="text-[10px] font-extrabold text-[#d4af37] uppercase tracking-wider block text-left">Your Direct Invitation Link</span>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-[#080a10] border border-white/10 px-3 py-3 rounded-lg text-xs font-mono text-gray-400 flex-grow truncate select-all text-left">
+                        {window.location.origin}?ref={userProfile.referralCode}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const link = `${window.location.origin}?ref=${userProfile.referralCode}`;
+                          navigator.clipboard.writeText(link);
+                          setCopiedLink(true);
+                          setTimeout(() => setCopiedLink(false), 2000);
+                        }}
+                        className="bg-[#1c2335] hover:bg-[#d4af37] hover:text-black border border-white/10 px-4 py-3.5 rounded-lg text-xs font-bold text-white transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copiedLink ? 'COPIED' : 'COPY'}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-500 text-left">Automatically pre-fills your referral code on registration.</p>
+                  </div>
+                </div>
+
+                {/* Referral Wallet Stats Bento Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[#1c2335]">
+                  <div className="p-4.5 bg-[#121622] border border-[#21293c] rounded-xl text-center space-y-1">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total Referrals</span>
+                    <div className="text-2xl font-black text-white font-display">
+                      {userProfile.referralCount || 0}
+                    </div>
+                    <span className="text-[9px] text-gray-500 font-mono">Verified successful sign-ups</span>
+                  </div>
+
+                  <div className="p-4.5 bg-[#121622] border border-[#21293c] rounded-xl text-center space-y-1">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total Referral Earnings</span>
+                    <div className="text-2xl font-black text-[#d4af37] font-display">
+                      ${(userProfile.referralEarnings || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                    <span className="text-[9px] text-gray-500 font-mono">15% share accrued historically</span>
+                  </div>
+
+                  <div className="p-4.5 bg-[#121622] border border-[#21293c] rounded-xl text-center space-y-1">
+                    <span className="text-[10px] font-bold text-[#d4af37] uppercase tracking-wider block">Referral Wallet Balance</span>
+                    <div className="text-2xl font-black text-emerald-400 font-display">
+                      ${(userProfile.referralWallet || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                    <span className="text-[9px] text-gray-500 font-mono">Available for secure withdrawal</span>
+                  </div>
+                </div>
+
+                {/* Withdrawal Rule Panel */}
+                <div className="p-5 bg-[#111522] border border-[#21293c] rounded-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="space-y-1 text-left">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">Referral Withdrawal Threshold Rule</h4>
+                      <p className="text-xs text-gray-400 leading-relaxed">
+                        To safeguard against fraud and self-referrals, referral earnings can be unlocked for withdrawal after reaching <strong>10 successful qualifying referrals</strong>.
+                      </p>
+                    </div>
+                    <div className="shrink-0 self-start sm:self-auto bg-[#080a10] border border-white/10 px-4 py-2 rounded-lg text-xs font-mono">
+                      Progress: <strong className="text-[#d4af37]">{userProfile.referralCount || 0}</strong> / <span className="text-gray-500 font-bold">10</span>
+                    </div>
+                  </div>
+
+                  {withdrawSuccess && (
+                    <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-medium text-left">
+                      {withdrawSuccess}
+                    </div>
+                  )}
+
+                  {withdrawError && (
+                    <div className="p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs font-medium text-left">
+                      {withdrawError}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      disabled={withdrawLoading || (userProfile.referralCount || 0) < 10 || (userProfile.referralWallet || 0) <= 0}
+                      onClick={async () => {
+                        if (!currentUser) return;
+                        setWithdrawLoading(true);
+                        setWithdrawSuccess(null);
+                        setWithdrawError(null);
+                        try {
+                          // Perform secure atomic balance transfer
+                          const userRef = doc(db, 'users', currentUser.uid);
+                          const snap = await getDoc(userRef);
+                          if (snap.exists()) {
+                            const data = snap.data();
+                            const currentWallet = data.referralWallet || 0;
+                            const currentBalance = data.balance || 0;
+                            const currentCount = data.referralCount || 0;
+
+                            if (currentCount < 10) {
+                              throw new Error(`Withdrawal Locked: You need 10 successful referrals. (Current: ${currentCount}/10)`);
+                            }
+                            if (currentWallet <= 0) {
+                              throw new Error("Withdrawal Failed: No referral earnings available to withdraw.");
+                            }
+
+                            await updateDoc(userRef, {
+                              referralWallet: 0,
+                              balance: currentBalance + currentWallet
+                            });
+
+                            // Create notification
+                            const notifId = 'NOTIF-WITHDRAW-' + Math.floor(100000 + Math.random() * 900000);
+                            await updateDoc(userRef, {
+                              [`notifications.${notifId}`]: {
+                                id: notifId,
+                                userId: currentUser.uid,
+                                title: "Referral Withdrawal Successful!",
+                                message: `Your referral balance of $${currentWallet.toFixed(2)} has been successfully transferred to your main investment balance.`,
+                                type: 'success',
+                                timestamp: new Date().toLocaleString(),
+                                read: false
+                              }
+                            });
+
+                            setWithdrawSuccess(`Success! $${currentWallet.toFixed(2)} has been securely transferred to your main wallet balance.`);
+                            onCompletePurchase(); // Syncs layout balances immediately
+                          }
+                        } catch (err: any) {
+                          setWithdrawError(err.message || "Failed to process withdrawal.");
+                        } finally {
+                          setWithdrawLoading(false);
+                        }
+                      }}
+                      className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        (userProfile.referralCount || 0) >= 10 && (userProfile.referralWallet || 0) > 0
+                          ? 'bg-gradient-to-r from-[#fde68a] to-[#d4af37] text-black font-extrabold shadow-lg shadow-amber-500/10 hover:brightness-110'
+                          : 'bg-[#1b2234] text-gray-500 border border-white/5 cursor-not-allowed'
+                      }`}
+                    >
+                      <Wallet className="w-4 h-4" />
+                      {withdrawLoading ? "Transferring..." : (userProfile.referralCount || 0) >= 10 ? "Withdraw Referral Balance" : `Locked: Requires 10 Referrals (${userProfile.referralCount || 0}/10)`}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= SUBTAB: SUPPORT ================= */}
+          {activeSubTab === 'support' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
+              
+              {/* Support Form Column */}
+              <div className="lg:col-span-2 bg-[#0c0f17] p-6 rounded-2xl border border-[#202737] shadow-xl space-y-6">
+                <div className="text-left">
+                  <h3 className="text-base font-extrabold text-white uppercase tracking-wider font-display flex items-center gap-2">
+                    <Ticket className="w-5 h-5 text-[#d4af37]" />
+                    Support & Help Center
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Submit an official inquiry. Our desk dispatches inquiries to Support@worldcupstock.space and tracks ticket statuses.
+                  </p>
+                </div>
+
+                {supportSuccess ? (
+                  <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-4 text-center">
+                    <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-white uppercase tracking-wider">Support Ticket Created Successfully!</h4>
+                      <p className="text-xs text-gray-400">
+                        Your inquiry has been assigned <strong>Ticket ID: {supportSuccess.ticketId}</strong> and securely archived.
+                      </p>
+                    </div>
+                    <p className="text-xs text-[#d4af37] font-medium bg-[#080a10] border border-white/5 p-3.5 rounded-lg max-w-md mx-auto leading-relaxed">
+                      {supportSuccess.message}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSupportSuccess(null);
+                        setSupportSubject('');
+                        setSupportMessage('');
+                        setSupportScreenshot(null);
+                        setSupportScreenshotName(null);
+                      }}
+                      className="bg-[#1c2335] hover:bg-[#d4af37] hover:text-black text-white text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-lg transition-all cursor-pointer"
+                    >
+                      Open Another Ticket
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!supportSubject || !supportMessage) {
+                        setSupportError("Please specify a subject and describe your inquiry.");
+                        return;
+                      }
+
+                      setSupportLoading(true);
+                      setSupportError(null);
+
+                      try {
+                        const ticketId = await createSupportTicket(currentUser?.uid || 'Anonymous', {
+                          fullName: supportFullName,
+                          email: supportEmail,
+                          subject: supportSubject,
+                          message: supportMessage,
+                          screenshot: supportScreenshot || undefined
+                        });
+
+                        setSupportSuccess({
+                          ticketId,
+                          message: `Your support request has been successfully dispatched to Support@worldcupstock.space. Our support team will respond to ${supportEmail} within 12-24 hours.`
+                        });
+                      } catch (err: any) {
+                        setSupportError(err.message || "Failed to submit ticket.");
+                      } finally {
+                        setSupportLoading(false);
+                      }
+                    }}
+                    className="space-y-4.5 pt-4 border-t border-[#1c2335]"
+                  >
+                    {supportError && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs text-left">
+                        {supportError}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5 text-left">
+                        <label className="block text-[10px] uppercase tracking-wider font-extrabold text-gray-400">Your Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={supportFullName}
+                          onChange={(e) => setSupportFullName(e.target.value)}
+                          placeholder="Full Name"
+                          className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 px-4 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37]"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5 text-left">
+                        <label className="block text-[10px] uppercase tracking-wider font-extrabold text-gray-400">Your Email Address</label>
+                        <input
+                          type="email"
+                          required
+                          value={supportEmail}
+                          onChange={(e) => setSupportEmail(e.target.value)}
+                          placeholder="contact@email.com"
+                          className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 px-4 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                      <label className="block text-[10px] uppercase tracking-wider font-extrabold text-gray-400">Inquiry Subject</label>
+                      <select
+                        required
+                        value={supportSubject}
+                        onChange={(e) => setSupportSubject(e.target.value)}
+                        className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 px-4 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] font-medium"
+                      >
+                        <option value="">-- Select Inquiry Subject Category --</option>
+                        <option value="Investment Purchase Issue">Investment Purchase Issue</option>
+                        <option value="Stripe Checkout Redirection">Stripe Checkout Redirection</option>
+                        <option value="Account Verification & 2FA">Account Verification & 2FA</option>
+                        <option value="Referral Code & Wallet Bonuses">Referral Code & Wallet Bonuses</option>
+                        <option value="Security Logs Auditing">Security Logs Auditing</option>
+                        <option value="General Technical Question">General Technical Question</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                      <label className="block text-[10px] uppercase tracking-wider font-extrabold text-gray-400">Detailed Description</label>
+                      <textarea
+                        required
+                        rows={5}
+                        value={supportMessage}
+                        onChange={(e) => setSupportMessage(e.target.value)}
+                        placeholder="Please write the complete details of your technical issue, transaction IDs, or inquiry so our desk can review and respond immediately."
+                        className="w-full bg-[#080a10] border border-white/10 rounded-xl py-3 px-4 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] resize-none leading-relaxed"
+                      />
+                    </div>
+
+                    {/* Screenshot Upload / Drag & Drop area */}
+                    <div className="space-y-1.5 text-left">
+                      <label className="block text-[10px] uppercase tracking-wider font-extrabold text-gray-400">Screenshot / Document Attachment (Optional)</label>
+                      <div
+                        onDragEnter={handleDrag}
+                        onDragOver={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDrop={handleDrop}
+                        className={`border-2 border-dashed rounded-xl p-5 text-center transition-all relative ${
+                          dragActive 
+                            ? 'border-[#d4af37] bg-amber-500/5' 
+                            : supportScreenshot 
+                              ? 'border-emerald-500/50 bg-emerald-500/5' 
+                              : 'border-white/10 hover:border-white/20 bg-[#080a10]'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          id="file-upload-support"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        
+                        {supportScreenshot ? (
+                          <div className="space-y-3">
+                            <img 
+                              src={supportScreenshot} 
+                              alt="Screenshot Preview" 
+                              className="w-24 h-24 object-cover mx-auto rounded-lg border border-white/10 shadow" 
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="text-xs">
+                              <span className="text-emerald-400 font-bold block">✓ Attachment Loaded</span>
+                              <span className="text-gray-500 font-mono text-[10px] truncate block max-w-xs mx-auto">{supportScreenshotName}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSupportScreenshot(null);
+                                setSupportScreenshotName(null);
+                              }}
+                              className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider"
+                            >
+                              Remove Attachment
+                            </button>
+                          </div>
+                        ) : (
+                          <label htmlFor="file-upload-support" className="cursor-pointer block space-y-2">
+                            <Upload className="w-8 h-8 text-gray-500 mx-auto" />
+                            <div className="text-xs">
+                              <span className="text-[#d4af37] font-bold">Upload a Screenshot</span> or drag and drop here
+                            </div>
+                            <div className="text-[10px] text-gray-600 font-mono">
+                              PNG, JPG, or JPEG up to 5MB
+                            </div>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        disabled={supportLoading}
+                        className="bg-gradient-to-r from-[#fde68a] to-[#d4af37] text-black font-extrabold text-xs uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-lg shadow-amber-500/10 hover:brightness-110 transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {supportLoading ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Submitting Ticket...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4" />
+                            Submit Technical Ticket
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* FAQ Section Column */}
+              <div className="bg-[#0c0f17] p-6 rounded-2xl border border-[#202737] shadow-xl space-y-6 self-start text-left">
+                <div>
+                  <h3 className="text-xs font-extrabold text-[#d4af37] uppercase tracking-widest font-display">FAQ / Quick Answers</h3>
+                  <p className="text-[10px] text-gray-500 mt-1 font-medium">Review standard guides regarding trading rules and refer-and-earn.</p>
+                </div>
+
+                <div className="space-y-4 pt-3 border-t border-[#1b2234]">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-white block">How are World Cup Equities priced?</span>
+                    <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
+                      Each country share represents equity tied to their tournament survival. Prices fluctuate between $1.00 and $100.00 in real-time based on public buy/sell orders, match predictions, and game outcomes.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 pt-3 border-t border-[#1b2234]">
+                    <span className="text-xs font-bold text-white block">How is the 15% referral bonus paid?</span>
+                    <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
+                      Whenever a user you invited signs up with your code and submits their first verified investment, 15% of that payment is automatically computed on our backend and credited to your Referral Wallet instantly.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 pt-3 border-t border-[#1b2234]">
+                    <span className="text-xs font-bold text-white block">Why is there a withdrawal threshold?</span>
+                    <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
+                      To prevent self-referrals and account duplication exploits, referral balance transfers require a minimum of 10 successful qualifying referrals to become unlocked.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 pt-3 border-t border-[#1b2234]">
+                    <span className="text-xs font-bold text-white block">Where does support respond?</span>
+                    <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
+                      Support logs are processed through Support@worldcupstock.space. Complete technical responses are emailed directly to your registered user address.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -2030,6 +2594,20 @@ export default function PortalDashboard({
           onCompletePurchase={() => {
             onCompletePurchase();
             setSelectedBuyCountry(null);
+          }}
+        />
+      )}
+
+      {/* ================= LIQUIDATION / SELL POPUP MODAL ================= */}
+      {selectedSellHolding && (
+        <SellModal
+          holding={selectedSellHolding.holding}
+          marketPrice={selectedSellHolding.marketPrice}
+          userId={currentUser ? currentUser.uid : null}
+          onClose={() => setSelectedSellHolding(null)}
+          onCompleteSale={() => {
+            onCompletePurchase();
+            setSelectedSellHolding(null);
           }}
         />
       )}

@@ -9,10 +9,8 @@ import {
   Coins, 
   CreditCard, 
   RefreshCw, 
-  ArrowLeft, 
   CheckCircle, 
   Lock, 
-  ExternalLink,
   HelpCircle
 } from 'lucide-react';
 import { createPaymentSession, verifyAndProcessPayment } from '../lib/firebase-service';
@@ -22,7 +20,7 @@ interface PurchaseModalProps {
   userCash: number;
   userId: string | null;
   onClose: () => void;
-  onCompletePurchase: () => void; // Tell parent to reload holdings / transactions from Firestore
+  onCompletePurchase: (shares?: number, totalPaid?: number) => void; // Reload states or trigger guest purchase complete
   isEmailVerified?: boolean;
 }
 
@@ -35,13 +33,13 @@ export default function PurchaseModal({
   isEmailVerified = true
 }: PurchaseModalProps) {
   // Step 1: Input amount
-  // Step 2: CryptoMUS Payment Gateway
+  // Step 2: Payment Gateway (CryptoMUS or Card)
   // Step 3: Success Confirmation
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [amount, setAmount] = useState<number>(100);
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('USDT');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('CreditCard');
   
-  // CryptoMUS transaction context
+  // Transaction context
   const [paymentId, setPaymentId] = useState<string>('');
   const [apiLoading, setApiLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -61,7 +59,7 @@ export default function PurchaseModal({
   const sharesCalculated = amount > 0 ? amount / country.currentPrice : 0;
   const potentialPayout = sharesCalculated * country.winningSettlementPrice;
   const potentialReturnPercent = Number((country.winningSettlementPrice / country.currentPrice).toFixed(1));
-  const hasSufficientBalance = userCash >= amount;
+  const hasSufficientBalance = selectedMethod === 'CreditCard' ? true : userCash >= amount;
 
   // Countdown timer for Crypto Address
   useEffect(() => {
@@ -84,7 +82,7 @@ export default function PurchaseModal({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Step 1 Click: Proceed to CryptoMUS Gateway
+  // Step 1 Click: Proceed to Payment Gateway
   const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount < 0.1) return;
@@ -92,15 +90,51 @@ export default function PurchaseModal({
       setErrorMsg("Insufficient USD collateral value in your investor account balance.");
       return;
     }
+
+    // Guest Mode - Bypass Firestore Session and go directly to Step 2
     if (!userId) {
-      setErrorMsg("Investor identification node mismatch. Please authenticate before making purchases.");
+      setPaymentId('MOCK-GUEST-PAY-' + Math.floor(100000 + Math.random() * 900000));
+      setStep(2);
+      setCountdown(900);
       return;
     }
 
     setApiLoading(true);
     setErrorMsg(null);
     try {
-      // Create real session in Firestore (Pending state)
+      if (selectedMethod === 'CreditCard') {
+        // Create real Stripe checkout session on Express server and redirect
+        const response = await fetch('/api/payments/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId,
+            countryId: country.id,
+            countryName: country.name,
+            flag: country.flag,
+            amount,
+            sharesQuantity: sharesCalculated,
+            pricePerShare: country.currentPrice,
+            winningSettlementPrice: country.winningSettlementPrice
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to create Stripe Checkout session");
+        }
+
+        if (data.url) {
+          window.location.href = data.url;
+          return;
+        } else {
+          throw new Error("Invalid response from checkout session API");
+        }
+      }
+
+      // Create real session in Firestore (Pending state) for Crypto payments
       const session = await createPaymentSession(userId, {
         amount,
         paymentMethod: selectedMethod,
@@ -116,22 +150,32 @@ export default function PurchaseModal({
       setStep(2);
       setCountdown(900); // reset clock
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to contact CryptoMUS Gateway.");
+      setErrorMsg(err.message || "Failed to configure payment gateway.");
     } finally {
       setApiLoading(false);
     }
   };
 
-  // Step 2 Click: Verify Payment & Settle Shares (Triggers Firebase atomic batch operation)
+  // Step 2 Click: Verify Payment & Settle Shares (Triggers Firebase atomic batch operation or guest local completion)
   const handleVerifyPayment = async () => {
-    if (!userId || !paymentId) return;
-    setIsVerifying(true);
     setErrorMsg(null);
+
+    // Guest Mode instant mock settle
+    if (!userId) {
+      setIsVerifying(true);
+      setTimeout(() => {
+        setIsVerifying(false);
+        setStep(3);
+        onCompletePurchase(sharesCalculated, amount);
+      }, 1200);
+      return;
+    }
+
+    if (!paymentId) return;
+    setIsVerifying(true);
     
     try {
       // Direct CryptoMUS Payment Gateway verify callback simulation
-      // In a real network, this queries CryptoMUS endpoint or listens to webhook.
-      // We directly fetch the payment session from Firestore and atomically transition it!
       const success = await verifyAndProcessPayment(userId, paymentId);
       
       if (success) {
@@ -148,7 +192,7 @@ export default function PurchaseModal({
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 z-50 overflow-y-auto">
+    <div className="fixed inset-0 min-h-screen bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 z-50 overflow-y-auto">
       {/* 3D Extruded Premium Luxury Card Container */}
       <div className="bg-gradient-to-b from-[#0e121e] via-[#090c14] to-[#04060a] border border-[#2d374d] w-full max-w-lg rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.9)] relative font-sans my-auto transition-all transform scale-100 border-t-[#d4af37]/40">
         
@@ -191,9 +235,9 @@ export default function PurchaseModal({
         {step === 1 && (
           <form onSubmit={handleProceedToPayment} className="p-6 space-y-5">
             
-            {/* Real-time price and ledger info cards - 3D styled bevels */}
+            {/* Real-time price and ledger info cards - 3D styled bevels with gold & emerald green accents */}
             <div className="grid grid-cols-2 gap-3.5">
-              <div className="bg-[#080a11] p-3.5 rounded-xl border border-[#1f273b] shadow-inner relative overflow-hidden group">
+              <div className="bg-[#080a11] p-3.5 rounded-xl border border-[#1f273b] shadow-inner relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-[#d4af37]" />
                 <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider block ml-1">Price Per Share</span>
                 <span className="text-base font-extrabold text-white font-mono block mt-1 ml-1">
@@ -201,7 +245,7 @@ export default function PurchaseModal({
                 </span>
               </div>
               
-              <div className="bg-[#080a11] p-3.5 rounded-xl border border-[#1f273b] shadow-inner relative overflow-hidden group">
+              <div className="bg-[#080a11] p-3.5 rounded-xl border border-[#1f273b] shadow-inner relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-[#10b981]" />
                 <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider block ml-1">Available Balance</span>
                 <span className="text-base font-extrabold text-emerald-400 font-mono block mt-1 ml-1">
@@ -226,7 +270,7 @@ export default function PurchaseModal({
                   type="number"
                   min="0.10"
                   step="any"
-                  value={amount}
+                  value={amount || ''}
                   onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
                   className="w-full pl-8 pr-4 py-3 bg-[#111624] border border-[#25324c] rounded-xl text-base text-white font-mono font-bold focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]/35 shadow-inner transition-all"
                 />
@@ -302,37 +346,38 @@ export default function PurchaseModal({
               </div>
             </div>
 
-            {/* Select CryptoMUS Payment Method - 3D Buttons */}
+            {/* Select Inbound Provider - 3D Buttons */}
             <div className="space-y-2.5">
               <label className="block text-xs font-black uppercase tracking-wider text-gray-400">
                 Select Checkout Inbound Provider
               </label>
-              <div className="grid grid-cols-3 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('USDT')}
-                  className={`p-3.5 rounded-xl border text-center transition-all cursor-pointer relative overflow-hidden active:translate-y-0.5 ${selectedMethod === 'USDT' ? 'bg-[#d4af37]/10 border-[#d4af37] text-white font-bold shadow-[0_4px_12px_rgba(212,175,55,0.15)]' : 'bg-[#101422] border-[#1e273b] text-gray-400 hover:text-white hover:border-[#2d374d]'}`}
-                >
-                  <Coins className="w-5 h-5 mx-auto text-[#d4af37] mb-1.5" />
-                  <span className="text-[9px] block font-mono font-bold tracking-wide">USDT (TRC20)</span>
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('BTC')}
-                  className={`p-3.5 rounded-xl border text-center transition-all cursor-pointer relative overflow-hidden active:translate-y-0.5 ${selectedMethod === 'BTC' ? 'bg-[#d4af37]/10 border-[#d4af37] text-white font-bold shadow-[0_4px_12px_rgba(212,175,55,0.15)]' : 'bg-[#101422] border-[#1e273b] text-gray-400 hover:text-white hover:border-[#2d374d]'}`}
-                >
-                  <Coins className="w-5 h-5 mx-auto text-amber-500 mb-1.5" />
-                  <span className="text-[9px] block font-mono font-bold tracking-wide">BTC (Legacy)</span>
-                </button>
-                
+              <div className="w-full">
                 <button
                   type="button"
                   onClick={() => setSelectedMethod('CreditCard')}
-                  className={`p-3.5 rounded-xl border text-center transition-all cursor-pointer relative overflow-hidden active:translate-y-0.5 ${selectedMethod === 'CreditCard' ? 'bg-[#d4af37]/10 border-[#d4af37] text-white font-bold shadow-[0_4px_12px_rgba(212,175,55,0.15)]' : 'bg-[#101422] border-[#1e273b] text-gray-400 hover:text-white hover:border-[#2d374d]'}`}
+                  className="w-full p-4 rounded-xl border border-[#d4af37] bg-gradient-to-r from-[#d4af37]/15 to-[#d4af37]/5 text-white font-bold shadow-[0_4px_15px_rgba(212,175,55,0.2)] hover:shadow-[0_6px_20px_rgba(212,175,55,0.3)] transition-all cursor-pointer relative overflow-hidden text-left flex items-center justify-between group active:translate-y-0.5"
                 >
-                  <CreditCard className="w-5 h-5 mx-auto text-sky-400 mb-1.5" />
-                  <span className="text-[9px] block font-sans font-extrabold tracking-wide">Debit / Card</span>
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/30 text-[#d4af37] group-hover:scale-105 transition-transform">
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs uppercase font-extrabold tracking-widest text-[#d4af37] block font-sans">
+                        Pay Now
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-medium block mt-0.5">
+                        Secure transaction with credit or debit card
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Select status indicator */}
+                  <div className="flex items-center gap-1.5 bg-[#d4af37]/20 border border-[#d4af37]/40 px-2.5 py-1 rounded-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
+                    <span className="text-[9px] uppercase tracking-wider text-[#d4af37] font-black font-mono">
+                      Selected
+                    </span>
+                  </div>
                 </button>
               </div>
             </div>
@@ -347,7 +392,7 @@ export default function PurchaseModal({
               </div>
             )}
 
-            {!isEmailVerified && (
+            {userId && !isEmailVerified && (
               <div className="bg-amber-500/10 border border-amber-500/25 px-3.5 py-3 rounded-xl text-xs text-amber-400 flex items-start space-x-2.5 shadow-md">
                 <AlertTriangle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-amber-400" />
                 <span>
@@ -359,7 +404,7 @@ export default function PurchaseModal({
             {/* Proceed Action button - Golden, Prominent, 3D extruded look */}
             <button
               type="submit"
-              disabled={amount < 0.1 || !hasSufficientBalance || apiLoading || !isEmailVerified}
+              disabled={amount < 0.1 || !hasSufficientBalance || apiLoading || (userId !== null && !isEmailVerified)}
               className="w-full py-4 bg-gradient-to-b from-[#f9d976] via-[#d4af37] to-[#8a640f] disabled:opacity-40 disabled:cursor-not-allowed text-black font-black font-sans rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-[0_6px_20px_rgba(212,175,55,0.25)] hover:shadow-[0_8px_25px_rgba(212,175,55,0.45)] hover:brightness-110 active:translate-y-0.5 border-t border-[#ffeb99] border-b-2 border-[#5c4308] flex items-center justify-center gap-2"
             >
               {apiLoading ? (
@@ -378,7 +423,7 @@ export default function PurchaseModal({
           </form>
         )}
 
-        {/* STEP 2: CRYPTOMUS ESCROW PAYMENT SECTOR */}
+        {/* STEP 2: PAYMENT GATEWAY ESCROW SECTOR */}
         {step === 2 && (
           <div className="p-6 space-y-6">
             
@@ -588,4 +633,3 @@ export default function PurchaseModal({
     </div>
   );
 }
-

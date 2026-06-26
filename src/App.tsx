@@ -23,6 +23,7 @@ import { Logo } from './components/Logo';
 import MarketSection from './components/MarketSection';
 import PurchaseModal from './components/PurchaseModal';
 import UserDashboard from './components/UserDashboard';
+import SellModal from './components/SellModal';
 import PortalDashboard from './components/PortalDashboard';
 import TournamentCenter from './components/TournamentCenter';
 import AdminPanel from './components/AdminPanel';
@@ -104,6 +105,9 @@ export default function App() {
 
   // Hero dropdown state
   const [heroDropdownOpen, setHeroDropdownOpen] = useState(false);
+
+  // Stripe Payment Status Message State
+  const [paymentStatusMessage, setPaymentStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // States with persistent LocalStorage retrieval
   const [countries, setCountries] = useState<CountryShare[]>(() => {
@@ -211,6 +215,34 @@ export default function App() {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // Detect Stripe checkout redirection search parameters and referral codes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    
+    // Handle incoming referral link
+    const refCode = params.get('ref');
+    if (refCode) {
+      sessionStorage.setItem('pending_referral_code', refCode.trim().toUpperCase());
+      setAuthModalOpen(true);
+    }
+
+    if (params.get('payment_success') === 'true') {
+      setActiveRoute('portal-dashboard');
+      setPaymentStatusMessage({
+        type: 'success',
+        text: "Stripe payment processed successfully! Your secure share holdings and transaction ledger have been updated."
+      });
+      // Clear query params to prevent repeating the message on reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('payment_cancelled') === 'true') {
+      setPaymentStatusMessage({
+        type: 'error',
+        text: "Your card payment checkout was cancelled or failed. No charges were made."
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   const syncFirebaseData = async (uid: string) => {
@@ -722,6 +754,7 @@ export default function App() {
 
   // State for purchase checkouts modal overlay
   const [selectedCountryBuy, setSelectedCountryBuy] = useState<CountryShare | null>(null);
+  const [selectedSellHolding, setSelectedSellHolding] = useState<{ holding: ShareHolding; marketPrice: number } | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [pendingBuyCountry, setPendingBuyCountry] = useState<CountryShare | null>(null);
 
@@ -1075,12 +1108,7 @@ export default function App() {
   };
 
   const handleBuyAction = (country: CountryShare) => {
-    if (currentUser) {
-      setSelectedCountryBuy(country);
-    } else {
-      setPendingBuyCountry(country);
-      setAuthModalOpen(true);
-    }
+    setSelectedCountryBuy(country);
   };
 
   const markAllAppNotificationsAsRead = () => {
@@ -1099,34 +1127,66 @@ export default function App() {
 
   if (activeRoute === 'portal-dashboard') {
     return (
-      <PortalDashboard
-        currentUser={currentUser}
-        onLogOut={handleSignOut}
-        holdings={holdings}
-        transactions={transactions}
-        activities={activities}
-        userCash={userCash}
-        countries={countries}
-        fixtures={fixtures}
-        onDepositFunds={handleDepositFunds}
-        onNavigateGuest={() => setActiveRoute('dashboard')}
-        onCompletePurchase={() => {
-          if (currentUser) {
-            syncFirebaseData(currentUser.uid);
-          }
-        }}
-        loadFootballData={loadFootballData}
-        apiLoading={apiLoading}
-        apiError={apiError}
-        lastSyncTime={lastSyncTime}
-        numTeamsLoaded={numTeamsLoaded}
-        numFixturesLoaded={numFixturesLoaded}
-        numStandingsLoaded={numStandingsLoaded}
-        initialSelectedCountry={selectedCountryBuy}
-        onClearInitialSelectedCountry={() => setSelectedCountryBuy(null)}
-        apiSuccessCount={apiSuccessCount}
-        apiFailedCount={apiFailedCount}
-      />
+      <>
+        <PortalDashboard
+          currentUser={currentUser}
+          onLogOut={handleSignOut}
+          holdings={holdings}
+          transactions={transactions}
+          activities={activities}
+          userCash={userCash}
+          countries={countries}
+          fixtures={fixtures}
+          onDepositFunds={handleDepositFunds}
+          onNavigateGuest={() => setActiveRoute('dashboard')}
+          onCompletePurchase={() => {
+            if (currentUser) {
+              syncFirebaseData(currentUser.uid);
+            }
+          }}
+          loadFootballData={loadFootballData}
+          apiLoading={apiLoading}
+          apiError={apiError}
+          lastSyncTime={lastSyncTime}
+          numTeamsLoaded={numTeamsLoaded}
+          numFixturesLoaded={numFixturesLoaded}
+          numStandingsLoaded={numStandingsLoaded}
+          initialSelectedCountry={selectedCountryBuy}
+          onClearInitialSelectedCountry={() => setSelectedCountryBuy(null)}
+          apiSuccessCount={apiSuccessCount}
+          apiFailedCount={apiFailedCount}
+        />
+        {/* Stripe notification overlay */}
+        {paymentStatusMessage && (
+          <div className="fixed bottom-6 right-6 z-50 max-w-md p-4 bg-gradient-to-r from-[#0d121e] to-[#04060a] border border-[#2d374d] rounded-xl shadow-2xl border-l-4 border-l-[#d4af37]">
+            <div className="flex items-start gap-3">
+              {paymentStatusMessage.type === 'success' ? (
+                <div className="p-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+              ) : (
+                <div className="p-1 rounded-full bg-red-500/10 border border-[#ea580c]/30 text-red-400">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+              )}
+              <div className="flex-1 text-left">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider">
+                  {paymentStatusMessage.type === 'success' ? "Payment Confirmed" : "Payment Cancelled"}
+                </h4>
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                  {paymentStatusMessage.text}
+                </p>
+              </div>
+              <button 
+                onClick={() => setPaymentStatusMessage(null)}
+                className="text-gray-500 hover:text-white transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -1642,62 +1702,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Authenticated secured portfolio drawer/panel embedded below */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
-              {currentUser ? (
-                <div className="bg-[#10131c]/30 rounded-2xl border border-white/5 p-1.5 shadow-2xl">
-                  <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between select-none">
-                    <div>
-                      <span className="text-[10px] text-emerald-400 font-extrabold tracking-widest uppercase font-mono block">SECURE RECONCILIATION DECK</span>
-                      <h4 className="text-base font-bold text-white font-display">Escrow Portfolio Ledger</h4>
-                    </div>
-                    <span className="p-1 px-3.5 bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-[10px] font-bold font-mono rounded-lg uppercase tracking-wider">
-                      Ledger ID: FIFA-U-{currentUser.displayName.toUpperCase().slice(0,6)}
-                    </span>
-                  </div>
-                  <UserDashboard
-                    currentUser={currentUser}
-                    onLogOut={() => setCurrentUser(null)}
-                    holdings={holdings}
-                    transactions={transactions}
-                    activities={activities}
-                    userCash={userCash}
-                    countries={countries}
-                    fixtures={fixtures}
-                    onDepositFunds={handleDepositFunds}
-                  />
-                </div>
-              ) : (
-                <div className="bg-[#10131c]/60 border-2 border-[#d4af37]/45 rounded-2xl p-8 text-center max-w-xl mx-auto space-y-5 shadow-[0_0_25px_rgba(212,175,55,0.15)]">
-                  <div className="flex justify-center">
-                    <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/35 text-[#d4af37] flex items-center justify-center animate-bounce">
-                      <Lock className="w-6 h-6" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-black text-white text-base uppercase tracking-widest font-display">SECURE ACCOUNT ACCESS</h4>
-                    <p className="text-xs text-gray-300 leading-relaxed max-w-sm mx-auto">
-                      Create an account or sign in to manage your portfolio, track your share holdings, view transaction history, and monitor your World Cup investments in real time.
-                    </p>
-                  </div>
-                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <button
-                      onClick={() => { setActiveRoute('login'); }}
-                      className="w-full sm:w-auto px-8 py-3 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-black text-xs rounded-xl hover:from-white hover:to-[#fbbf24] shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-widest border border-white/20"
-                    >
-                      Sign In
-                    </button>
-                    <button
-                      onClick={() => { setActiveRoute('login'); }}
-                      className="w-full sm:w-auto px-8 py-3 bg-[#171c2a] text-white font-black text-xs rounded-xl hover:bg-[#20283b] shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-widest border border-[#2b354e]"
-                    >
-                      Create Account
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
           </div>
         )}
 
@@ -1770,63 +1774,7 @@ export default function App() {
               onManualTriggerSync={loadFootballData}
             />
 
-            {/* Authenticated secured portfolio deck embedded below tournament scene */}
-            {currentUser ? (
-              <div className="mt-10">
-                <div className="bg-[#10131c]/30 rounded-2xl border border-white/5 p-1.5 shadow-2xl">
-                  <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between select-none">
-                    <div>
-                      <span className="text-[10px] text-emerald-400 font-extrabold tracking-widest uppercase font-mono block">SECURE RECONCILIATION DECK</span>
-                      <h4 className="text-base font-bold text-white font-display">Escrow Portfolio Ledger</h4>
-                    </div>
-                    <span className="p-1 px-3.5 bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-[10px] font-bold font-mono rounded-lg uppercase tracking-wider">
-                      Ledger ID: FIFA-U-{currentUser.displayName.toUpperCase().slice(0,6)}
-                    </span>
-                  </div>
-                  <UserDashboard
-                    currentUser={currentUser}
-                    onLogOut={() => setCurrentUser(null)}
-                    holdings={holdings}
-                    transactions={transactions}
-                    activities={activities}
-                    userCash={userCash}
-                    countries={countries}
-                    fixtures={fixtures}
-                    onDepositFunds={handleDepositFunds}
-                  />
-                </div>
-              </div>
-            ) : (
-              /* Account access section */
-              <div className="mt-10 bg-[#10131c]/40 border border-[#202737] rounded-xl p-8 text-center max-w-xl mx-auto space-y-5 shadow-2xl">
-                <div className="flex justify-center">
-                  <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/20 text-[#d4af37] flex items-center justify-center">
-                    <Trophy className="w-6 h-6" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <h4 className="font-extrabold text-white text-base font-display uppercase tracking-wider">SECURE ACCOUNT ACCESS</h4>
-                  <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto">
-                    Create an account or sign in to manage your portfolio, track team share holdings, view transaction history, and monitor performance in real-time.
-                  </p>
-                </div>
-                
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xs mx-auto">
-                  <button
-                    onClick={() => setActiveRoute('login')}
-                    className="w-full py-3 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold text-xs rounded-xl hover:from-white hover:to-[#fbbf24] shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider border border-white/20"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => setActiveRoute('login')}
-                    className="w-full py-3 bg-[#171c2a] text-white font-extrabold text-xs rounded-xl hover:bg-[#20283b] shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider border border-[#2b354e]"
-                  >
-                    Create Account
-                  </button>
-                </div>
-              </div>
-            )}
+
           </div>
         )}
 
@@ -1975,11 +1923,86 @@ export default function App() {
           userCash={userCash}
           userId={currentUser ? currentUser.uid : null}
           onClose={() => setSelectedCountryBuy(null)}
-          onCompletePurchase={() => {
+          onCompletePurchase={(shares, totalPaid) => {
             if (currentUser) {
               syncFirebaseData(currentUser.uid);
+            } else if (shares !== undefined && totalPaid !== undefined) {
+              setUserCash(prev => Math.max(0, prev - totalPaid));
+              handleCompletePurchase(selectedCountryBuy.id, totalPaid, shares, 'USDT');
             }
             setSelectedCountryBuy(null);
+          }}
+        />
+      )}
+
+      {/* Liquidation selection modal portal */}
+      {selectedSellHolding && (
+        <SellModal
+          holding={selectedSellHolding.holding}
+          marketPrice={selectedSellHolding.marketPrice}
+          userId={currentUser ? currentUser.uid : null}
+          onClose={() => setSelectedSellHolding(null)}
+          onCompleteSale={(sharesSold, usdReceived) => {
+            if (currentUser) {
+              syncFirebaseData(currentUser.uid);
+            } else if (sharesSold !== undefined && usdReceived !== undefined) {
+              // Guest mode sale in-memory update
+              setUserCash(prev => prev + usdReceived);
+
+              setHoldings(prev => {
+                const match = prev.find(h => h.id === selectedSellHolding.holding.id);
+                if (!match) return prev;
+                const remaining = match.sharesQuantity - sharesSold;
+                if (remaining < 0.0001) {
+                  return prev.filter(h => h.id !== selectedSellHolding.holding.id);
+                } else {
+                  return prev.map(h => h.id === selectedSellHolding.holding.id ? {
+                    ...h,
+                    sharesQuantity: remaining,
+                    amountInvested: Math.max(0, h.amountInvested - (sharesSold * h.averagePurchasePrice)),
+                    potentialWinningValue: remaining * h.winningSettlementPrice
+                  } : h);
+                }
+              });
+
+              const txId = `tx-ledger-sell-${Date.now()}`;
+              const sellTx: TransactionRecord = {
+                id: txId,
+                date: new Date().toLocaleTimeString() + ' ' + new Date().toLocaleDateString(),
+                countryId: selectedSellHolding.holding.countryId,
+                countryName: selectedSellHolding.holding.countryName,
+                flag: selectedSellHolding.holding.flag,
+                amountInvested: -usdReceived,
+                sharesQuantity: -sharesSold,
+                pricePerShare: selectedSellHolding.marketPrice,
+                paymentMethod: 'USDT',
+                status: 'Completed',
+                txHash: '0x' + Array.from({length: 40}, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('')
+              };
+              setTransactions(prev => [sellTx, ...prev]);
+
+              const activityRecord: MarketActivity = {
+                id: `act-user-sell-${Date.now()}`,
+                userName: 'You (Secure Escrow)',
+                countryId: selectedSellHolding.holding.countryId,
+                countryName: selectedSellHolding.holding.countryName,
+                flag: selectedSellHolding.holding.flag,
+                amountInvested: -usdReceived,
+                timestamp: 'Just now'
+              };
+              setActivities(prev => [activityRecord, ...prev]);
+
+              const newAlert: AppNotification = {
+                id: `n-sell-${Date.now()}`,
+                title: 'Liquidation Confirmed!',
+                message: `Successfully liquidated ${sharesSold.toFixed(4)} shares of ${selectedSellHolding.holding.countryName}. $${usdReceived.toFixed(2)} USD credited to your balance.`,
+                type: 'success',
+                timestamp: 'Just now',
+                read: false
+              };
+              setNotifications(prev => [newAlert, ...prev]);
+            }
+            setSelectedSellHolding(null);
           }}
         />
       )}
@@ -2117,18 +2140,31 @@ export default function App() {
               </div>
             </div>
 
-            {/* Column 4: Cryptographic Governance */}
+            {/* Column 4: Cryptographic Governance & Contacts */}
             <div className="space-y-3.5">
-              <span className="font-black text-white text-xs uppercase tracking-wider block">System Trust Hub</span>
-              <p className="text-[11px] leading-relaxed text-[#4e5666]">
-                All matches settle dynamically on isolated block nodes. Instant payout escrow and high accuracy logs.
-              </p>
-              <button 
-                onClick={() => setActiveRoute('admin')}
-                className="w-full text-center py-2 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 text-[10px] font-bold uppercase rounded transition-colors block cursor-pointer"
-              >
-                Governance Auditor Control
-              </button>
+              <span className="font-black text-white text-xs uppercase tracking-wider block">Official Inquiries & Support</span>
+              <div className="space-y-2 text-[11px] text-[#9da8bd]">
+                <div className="flex flex-col space-y-0.5">
+                  <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Investment Enquiries</span>
+                  <a href="mailto:Invest@worldcupstock.space" className="hover:text-[#d4af37] transition-colors font-mono">Invest@worldcupstock.space</a>
+                </div>
+                <div className="flex flex-col space-y-0.5">
+                  <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">General Enquiries</span>
+                  <a href="mailto:Contact@worldcupstock.space" className="hover:text-[#d4af37] transition-colors font-mono">Contact@worldcupstock.space</a>
+                </div>
+                <div className="flex flex-col space-y-0.5">
+                  <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Customer Support</span>
+                  <a href="mailto:Support@worldcupstock.space" className="hover:text-[#d4af37] transition-colors font-mono">Support@worldcupstock.space</a>
+                </div>
+              </div>
+              <div className="pt-2">
+                <button 
+                  onClick={() => setActiveRoute('admin')}
+                  className="w-full text-center py-2 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 text-[10px] font-bold uppercase rounded transition-colors block cursor-pointer"
+                >
+                  Governance Auditor Control
+                </button>
+              </div>
             </div>
 
           </div>
@@ -2153,6 +2189,37 @@ export default function App() {
 
         </div>
       </footer>
+
+      {/* Stripe notification overlay */}
+      {paymentStatusMessage && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md p-4 bg-gradient-to-r from-[#0d121e] to-[#04060a] border border-[#2d374d] rounded-xl shadow-2xl border-l-4 border-l-[#d4af37]">
+          <div className="flex items-start gap-3">
+            {paymentStatusMessage.type === 'success' ? (
+              <div className="p-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+            ) : (
+              <div className="p-1 rounded-full bg-red-500/10 border border-[#ea580c]/30 text-red-400">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+            )}
+            <div className="flex-1 text-left">
+              <h4 className="font-bold text-white text-xs uppercase tracking-wider">
+                {paymentStatusMessage.type === 'success' ? "Payment Confirmed" : "Payment Cancelled"}
+              </h4>
+              <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                {paymentStatusMessage.text}
+              </p>
+            </div>
+            <button 
+              onClick={() => setPaymentStatusMessage(null)}
+              className="text-gray-500 hover:text-white transition-colors cursor-pointer shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
