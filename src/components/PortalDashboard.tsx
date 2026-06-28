@@ -435,7 +435,7 @@ export default function PortalDashboard({
     return sum + (h.sharesQuantity * currPrice);
   }, 0);
 
-  const portfolioValue = totalHoldingsStockValue + userCash;
+  const portfolioValue = totalHoldingsStockValue;
   const totalSettlementPayout = holdings.reduce((sum, h) => sum + (h.sharesQuantity * h.winningSettlementPrice), 0);
   const activeHoldingsCount = holdings.length;
   const totalTransactionsCount = transactions.length;
@@ -668,29 +668,6 @@ export default function PortalDashboard({
               ← Guest Landing
             </button>
 
-            {/* Quick Balance display */}
-            <div className="flex items-center space-x-2 py-1 px-2.5 bg-[#111522] border border-[#21293c] rounded-xl shadow-inner">
-              <Wallet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider hidden sm:inline">USD Balance:</span>
-              <span className="text-xs sm:text-sm font-extrabold text-emerald-400 font-mono">
-                ${userCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-
-            {/* Quick Add Demo Funds button next to balance */}
-            <button
-              onClick={async () => {
-                try {
-                  await onDepositFunds(5000);
-                } catch (e) {
-                  console.error("Failed to deposit demo funds:", e);
-                }
-              }}
-              className="px-2.5 py-1.5 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/30 hover:border-emerald-500/60 rounded-xl text-[10px] text-emerald-400 hover:text-emerald-300 font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center space-x-1 shadow-md"
-            >
-              <span>+ Add $5K Demo</span>
-            </button>
-
             {/* Logout button */}
             <button
               onClick={onLogOut}
@@ -775,7 +752,7 @@ export default function PortalDashboard({
               </div>
 
               {/* Bento Grid Analytics */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 
                 {/* Metric 1 - TOTAL PORTFOLIO VALUE */}
                 <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(16,185,129,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
@@ -789,43 +766,8 @@ export default function PortalDashboard({
                       ${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     <p className="text-[9px] text-gray-500 mt-1.5 font-semibold">
-                      Equity holdings + cash balance
+                      Total valuation of active equity holdings
                     </p>
-                  </div>
-                </div>
-
-                {/* Metric 2 - AVAILABLE CASH */}
-                <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(212,175,55,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#d4af37]/5 to-transparent blur-xl pointer-events-none" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider font-mono">AVAILABLE CASH</span>
-                    <Wallet className="w-4 h-4 text-[#d4af37]" />
-                  </div>
-                  <div className="mt-4 flex flex-col justify-between h-full">
-                    <div>
-                      <span className="text-3xl font-extrabold font-mono text-white tracking-tight">
-                        ${userCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                      <p className="text-[9px] text-gray-500 mt-1.5 font-semibold">
-                        Fully liquid settlement balance ready for allocation
-                      </p>
-                    </div>
-                    
-                    {/* Golden/Emerald Deposit Button */}
-                    <div className="mt-4">
-                      <button
-                        onClick={async () => {
-                          try {
-                            await onDepositFunds(5000);
-                          } catch (e) {
-                            console.error("Failed to deposit demo funds:", e);
-                          }
-                        }}
-                        className="w-full py-2 bg-gradient-to-b from-[#10b981] via-[#059669] to-[#047857] text-white font-black text-xs uppercase tracking-widest rounded-lg border-t border-[#34d399] border-b-2 border-[#064e3b] shadow-[0_2px_8px_rgba(16,185,129,0.3)] hover:shadow-[0_4px_15px_rgba(16,185,129,0.6)] hover:brightness-110 active:translate-y-0.5 transition-all duration-150 cursor-pointer text-center"
-                      >
-                        Add $5,000 Demo Funds
-                      </button>
-                    </div>
                   </div>
                 </div>
 

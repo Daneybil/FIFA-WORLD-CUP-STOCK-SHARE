@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Coins, TrendingUp, Trophy, Calendar, Activity, BookOpen, ShieldCheck, UserPlus, FileText, Play, AlertTriangle, Youtube, ExternalLink, Tv } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Coins, TrendingUp, Trophy, Calendar, Activity, BookOpen, ShieldCheck, UserPlus, LogIn, FileText, Play, AlertTriangle, Youtube, ExternalLink, Tv, Gift, HelpCircle } from 'lucide-react';
 import { MarketStat } from '../types';
 
 interface HeroSectionProps {
   stats: MarketStat;
   onNavigateToMarket: () => void;
   onNavigateToTournament?: () => void;
-  onSelectTab?: (tab: 'all' | 'trending' | 'speculative' | 'group' | 'active' | 'eliminated') => void;
-  onNavigateToSection?: (section: 'dashboard' | 'market' | 'live-data' | 'tournament' | 'how-it-works' | 'admin') => void;
+  onSelectTab?: (tab: 'all' | 'trending' | 'speculative' | 'group') => void;
+  onNavigateToSection?: (section: 'dashboard' | 'market' | 'live-data' | 'tournament' | 'how-it-works' | 'admin' | 'support' | 'referral' | 'calculator') => void;
   onTriggerCreateAccount?: () => void;
+  onTriggerLogin?: () => void;
+  activeLanguage?: string;
+  onChangeLanguage?: (lang: string) => void;
 }
 
 export default function HeroSection({ 
@@ -17,144 +20,583 @@ export default function HeroSection({
   onNavigateToTournament, 
   onSelectTab,
   onNavigateToSection,
-  onTriggerCreateAccount
+  onTriggerCreateAccount,
+  onTriggerLogin,
+  activeLanguage = 'English',
+  onChangeLanguage
 }: HeroSectionProps) {
-  const [videoMode, setVideoMode] = useState<'embed' | 'fallback'>('embed');
   const [playClicked, setPlayClicked] = useState(false);
-  const [timeLeft, setTimeLeft] = useState({
-    days: 31,
-    hours: 14,
-    minutes: 42,
-    seconds: 19,
-  });
 
-  // Calculate countdown to the Grand World Cup Final - July 19, 2026
-  useEffect(() => {
-    const targetDate = new Date('2026-07-19T18:00:00-07:00'); // final match time
+  // Localized Dictionary for Hero Content - Supports 13 world languages
+  const translations: Record<string, Record<string, string>> = {
+    "English": {
+      "badge": "🏆 WORLD'S BEST FOOTBALL STOCK MARKETPLACE",
+      "main_title": "Own Shares In Your Favorite World Cup Team",
+      "main_sub": "Buy shares in teams to win big if they become champions!",
+      "millionaire_title": "✨ PERFECT OPPORTUNITY TO BECOME A MILLIONAIRE! ✨",
+      "millionaire_desc": "This World Cup match is coming to change lives forever! It is your absolute perfect time and opportunity to become a millionaire. Buy shares now at an ultra-cheaper rate and win bigger when the country you support wins the championship!",
+      "video_title": "🔴 FIFA LIVE The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner",
+      "click_to_play": "CLICK TO PLAY STREAM",
+      "buy_shares_now": "Buy Shares Now",
+      "view_teams": "View Tournament Teams",
+      "market_tab": "World Cup Market",
+      "market_sub": "Equities & Indexes",
+      "live_tab": "Live Data Center",
+      "live_sub": "Fixtures & Scores",
+      "tournament_tab": "Tournament & Teams",
+      "tournament_sub": "Standings & Groups",
+      "support_tab": "Support Center",
+      "support_sub": "Official Desk",
+      "how_tab": "How It Works",
+      "how_sub": "Platform Guide",
+      "refer_tab": "Refer & Earn",
+      "refer_sub": "15% Wallet Bonus",
+      "register": "Register",
+      "register_sub": "Create Account",
+      "login": "Login",
+      "login_sub": "Existing User",
+      "calc_tab": "World Cup Stock Calculator",
+      "calc_sub": "Simulate Returns",
+      "security_title": "Investor Security & Trust Shield",
+      "security_desc": "Enterprise grade collateral backing, audited security clearing nodes, and real-time synchronisation.",
+      "backed_col": "FULLY BACKED COLLATERAL",
+      "audits": "COMPLIANT AUDITS",
+      "secured": "100% SECURED",
+      "index_title": "Tournaments & Teams Index:",
+      "squads": "⚽ All Squads",
+      "trending": "🔥 Trending"
+    },
+    "العربية (Arabic)": {
+      "badge": "🏆 أفضل سوق لتداول أسهم كرة القدم في العالم",
+      "main_title": "امتلك أسهماً في فريقك المفضل بكأس العالم",
+      "main_sub": "اشترِ أسهم المنتخبات لتربح مكاسب هائلة إذا أصبحوا أبطالاً!",
+      "millionaire_title": "✨ الفرصة المثالية لتصبح مليونيراً! ✨",
+      "millionaire_desc": "مباريات كأس العالم هذه قادمة لتغير حياتك إلى الأبد! إنها فرصتك ووقتك المثالي تماماً لتصبح مليونيراً. اشترِ الأسهم الآن بأسعار رخيصة جداً واربح مكاسب أكبر عندما يتوج البلد الذي تدعمه بالبطولة!",
+      "video_title": "🔴 بث مباشر فيفا: حفل جوائز الأفضل لعام ٢٠٢٥ | عشاء الاحتفال بالبطل",
+      "click_to_play": "انقر لتشغيل البث المباشر",
+      "buy_shares_now": "اشترِ الأسهم الآن",
+      "view_teams": "عرض منتخبات البطولة",
+      "market_tab": "سوق كأس العالم",
+      "market_sub": "الأسهم والمؤشرات",
+      "live_tab": "مركز البيانات المباشر",
+      "live_sub": "المباريات والنتائج",
+      "tournament_tab": "البطولة والفرق",
+      "tournament_sub": "الترتيب والمجموعات",
+      "support_tab": "مركز الدعم الفني",
+      "support_sub": "المكتب الرسمي",
+      "how_tab": "كيف تعمل المنصة",
+      "how_sub": "دليل الاستثمار",
+      "refer_tab": "شارك واربح",
+      "refer_sub": "١٥٪ مكافأة محفظة",
+      "register": "تسجيل جديد",
+      "register_sub": "إنشاء حساب",
+      "login": "تسجيل الدخول",
+      "login_sub": "مستثمر حالي",
+      "calc_tab": "حاسبة أسهم كأس العالم",
+      "calc_sub": "محاكاة العوائد",
+      "security_title": "درع الأمان والأمان للمستثمرين",
+      "security_desc": "دعم برأس مال مضمون بالكامل، وعقد تدقيق مشفر للسيولة ومزامنة فورية للصفقات.",
+      "backed_col": "سيولة مدعومة بالكامل",
+      "audits": "تدقيق مالي متوافق",
+      "secured": "آمن ومحمي ١٠٠٪",
+      "index_title": "فهرس البطولة والفرق:",
+      "squads": "⚽ جميع المنتخبات",
+      "trending": "🔥 الأكثر تداولاً"
+    },
+    "Español (Spanish)": {
+      "badge": "🏆 EL MEJOR MERCADO DE VALORES DE FÚTBOL DEL MUNDO",
+      "main_title": "Sea dueño de acciones de su equipo favorito de la Copa Mundial",
+      "main_sub": "¡Compre acciones de equipos para ganar en grande si se convierten en campeones!",
+      "millionaire_title": "✨ ¡OPORTUNIDAD PERFECTA PARA CONVERTIRSE EN MILLONARIO! ✨",
+      "millionaire_desc": "¡Este partido de la Copa Mundial viene para cambiar vidas para siempre! Es tu momento y oportunidad perfectos para convertirte en millonario. ¡Compre acciones ahora a un precio ultra-barato y gane más cuando el país que apoya gane el campeonato!",
+      "video_title": "🔴 FIFA EN VIVO The Best FIFA Football Awards™ 2025 | Cena de Gala FIFA",
+      "click_to_play": "HAGA CLIC PARA REPRODUCIR",
+      "buy_shares_now": "Comprar Acciones Ahora",
+      "view_teams": "Ver Equipos del Torneo",
+      "market_tab": "Mercado Mundial",
+      "market_sub": "Acciones e Índices",
+      "live_tab": "Centro de Datos",
+      "live_sub": "Partidos y Resultados",
+      "tournament_tab": "Torneo y Equipos",
+      "tournament_sub": "Posiciones y Grupos",
+      "support_tab": "Centro de Soporte",
+      "support_sub": "Mesa Oficial",
+      "how_tab": "Cómo Funciona",
+      "how_sub": "Guía de la Plataforma",
+      "refer_tab": "Recomendar y Ganar",
+      "refer_sub": "Bono de Cartera 15%",
+      "register": "Registrarse",
+      "register_sub": "Crear Cuenta",
+      "login": "Iniciar Sesión",
+      "login_sub": "Usuario Existente",
+      "calc_tab": "Calculadora de Acciones",
+      "calc_sub": "Simular Retornos",
+      "security_title": "Escudo de Seguridad y Confianza del Inversor",
+      "security_desc": "Respaldo de garantía de grado empresarial, nodos de compensación de seguridad auditados y sincronización en tiempo real.",
+      "backed_col": "GARANTÍA RESPALDADA AL 100%",
+      "audits": "AUDITORÍAS CUMPLIDAS",
+      "secured": "100% SEGURO",
+      "index_title": "Índice de Torneos y Equipos:",
+      "squads": "⚽ Todos los Equipos",
+      "trending": "🔥 Tendencias"
+    },
+    "Português (Portuguese)": {
+      "badge": "🏆 O MELHOR MERCADO DE AÇÕES DE FUTEBOL DO MUNDO",
+      "main_title": "Seja Dono de Ações da Sua Seleção Favorita da Copa do Mundo",
+      "main_sub": "Compre ações de seleções para ganhar muito se elas forem campeãs!",
+      "millionaire_title": "✨ OPORTUNIDADE PERFEITA PARA SE TORNAR UM MILIONÁRIO! ✨",
+      "millionaire_desc": "Esta Copa do Mundo está chegando para mudar vidas para sempre! É o seu momento e oportunidade perfeitos para se tornar um milionário. Compre ações agora a uma taxa super barata e ganhe muito mais quando o país que você apoia ganhar o campeonato!",
+      "video_title": "🔴 FIFA AO VIVO The Best FIFA Football Awards™ 2025 | Jantar de Gala FIFA",
+      "click_to_play": "CLIQUE PARA REPRODUZIR",
+      "buy_shares_now": "Comprar Ações Agora",
+      "view_teams": "Ver Seleções do Torneio",
+      "market_tab": "Mercado da Copa",
+      "market_sub": "Ações e Índices",
+      "live_tab": "Central de Jogos",
+      "live_sub": "Partidas e Placar",
+      "tournament_tab": "Torneio e Seleções",
+      "tournament_sub": "Tabela e Grupos",
+      "support_tab": "Central de Suporte",
+      "support_sub": "Mesa Oficial",
+      "how_tab": "Como Funciona",
+      "how_sub": "Guia do Usuário",
+      "refer_tab": "Indique e Ganhe",
+      "refer_sub": "Bônus de Carteira 15%",
+      "register": "Registrar",
+      "register_sub": "Criar Conta",
+      "login": "Entrar",
+      "login_sub": "Usuário Existente",
+      "calc_tab": "Calculadora da Copa",
+      "calc_sub": "Simular Retornos",
+      "security_title": "Escudo de Segurança e Confiança do Investidor",
+      "security_desc": "Garantia de nível corporativo, nós de compensação de segurança auditados e sincronização em tempo real.",
+      "backed_col": "GARANTIA TOTALMENTE RESPALDADA",
+      "audits": "AUDITORIAS EM DIA",
+      "secured": "100% SEGURO",
+      "index_title": "Índice de Torneios e Seleções:",
+      "squads": "⚽ Todas as Seleções",
+      "trending": "🔥 Tendências"
+    },
+    "Français (French)": {
+      "badge": "🏆 LE MEILLEUR MARCHÉ D'ACTIONS DE FOOTBALL AU MONDE",
+      "main_title": "Possédez des Actions de Votre Équipe Préférée de la Coupe du Monde",
+      "main_sub": "Achetez des actions pour gagner gros si elles deviennent championnes !",
+      "millionaire_title": "✨ L'OPPORTUNITÉ PARFAITE DE DEVENIR MILLIONNAIRE ! ✨",
+      "millionaire_desc": "Ce match de la Coupe du Monde va changer des vies pour toujours ! C'est le moment idéal pour devenir millionnaire. Achetez des actions à un tarif ultra-avantageux et gagnez encore plus lorsque le pays que vous soutenez remporte le championnat !",
+      "video_title": "🔴 FIFA EN DIRECT The Best FIFA Football Awards™ 2025 | Dîner Officiel de Gala",
+      "click_to_play": "CLIQUEZ POUR REPRODUIRE",
+      "buy_shares_now": "Acheter des Actions",
+      "view_teams": "Voir les Équipes",
+      "market_tab": "Marché de la Coupe",
+      "market_sub": "Actions et Indices",
+      "live_tab": "Centre des Matchs",
+      "live_sub": "Rencontres et Scores",
+      "tournament_tab": "Tournoi & Équipes",
+      "tournament_sub": "Classement et Groupes",
+      "support_tab": "Support Center",
+      "support_sub": "Bureau Officiel",
+      "how_tab": "Comment ça marche",
+      "how_sub": "Guide d'Investissement",
+      "refer_tab": "Parrainer & Gagner",
+      "refer_sub": "15% Bonus Portefeuille",
+      "register": "S'inscrire",
+      "register_sub": "Créer Compte",
+      "login": "Se Connecter",
+      "login_sub": "Utilisateur Existant",
+      "calc_tab": "Calculateur d'Actions",
+      "calc_sub": "Simuler les Gains",
+      "security_title": "Bouclier de Sécurité & Confiance des Investisseurs",
+      "security_desc": "Garanties de niveau entreprise, nœuds de compensation sécurisés et audités, synchronisation en temps réel.",
+      "backed_col": "GARANTIE ENTIÈREMENT SÉCURISÉE",
+      "audits": "AUDITS CONFORMES",
+      "secured": "100% SÉCURISÉ",
+      "index_title": "Index des Équipes:",
+      "squads": "⚽ Toutes les Équipes",
+      "trending": "🔥 Tendances"
+    },
+    "Deutsch (German)": {
+      "badge": "🏆 DER WELTBESTE FUSSBALL-AKTIENMARKT",
+      "main_title": "Besitzen Sie Aktien Ihres Lieblings-WM-Teams",
+      "main_sub": "Kaufen Sie Aktien von Teams, um groß zu gewinnen, wenn sie Weltmeister werden!",
+      "millionaire_title": "✨ PERFEKTE GELEGENHEIT, MILLIONÄR ZU WERDEN! ✨",
+      "millionaire_desc": "Dieses WM-Turnier wird Leben für immer verändern! Es ist Ihre absolut perfekte Gelegenheit, Millionär zu werden. Kaufen Sie jetzt Aktien zu extrem günstigen Preisen und gewinnen Sie groß, wenn das Land, das Sie unterstützen, die Meisterschaft gewinnt!",
+      "video_title": "🔴 FIFA LIVE The Best FIFA Football Awards™ 2025 | Gala-Celebration Dinner",
+      "click_to_play": "KLICKEN, UM STREAM ABZUSPIELEN",
+      "buy_shares_now": "Aktien jetzt kaufen",
+      "view_teams": "WM-Teams anzeigen",
+      "market_tab": "WM-Markt",
+      "market_sub": "Aktien & Indizes",
+      "live_tab": "Live-Datenzentrum",
+      "live_sub": "Spiele & Stände",
+      "tournament_tab": "Turnier & Teams",
+      "tournament_sub": "Tabellen & Gruppen",
+      "support_tab": "Support-Center",
+      "support_sub": "Offizielle Hilfe",
+      "how_tab": "Wie es funktioniert",
+      "how_sub": "Anleitung",
+      "refer_tab": "Freunde werben",
+      "refer_sub": "15% Wallet-Bonus",
+      "register": "Registrieren",
+      "register_sub": "Konto erstellen",
+      "login": "Einloggen",
+      "login_sub": "Anleger Login",
+      "calc_tab": "WM-Aktienrechner",
+      "calc_sub": "Gewinne simulieren",
+      "security_title": "Sicherheit & Anleger-Schutzschild",
+      "security_desc": "Unternehmenstaugliche Liquiditätssicherung, geprüfte Abwicklungsknoten und Echtzeit-Übertragung.",
+      "backed_col": "VOLLSTÄNDIG GECKTE SICHERHEIT",
+      "audits": "REGELKONFORME AUDITS",
+      "secured": "100% GESICHERT",
+      "index_title": "Turnier- & Team-Verzeichnis:",
+      "squads": "⚽ Alle Mannschaften",
+      "trending": "🔥 Angesagt"
+    },
+    "Italiano (Italian)": {
+      "badge": "🏆 IL MIGLIOR MERCATO AZIONARIO DI CALCIO AL MONDO",
+      "main_title": "Possiedi Azioni della Tua Squadra del Cuore dei Mondiali",
+      "main_sub": "Acquista azioni per vincere alla grande se diventano campioni!",
+      "millionaire_title": "✨ OPPORTUNITÀ PERFETTA PER DIVENTARE MILIONARIO! ✨",
+      "millionaire_desc": "Questa Coppa del Mondo cambierà le vite per sempre! È il tuo momento ideale per diventare milionario. Acquista subito le azioni a un prezzo ultra-economico e vinci ancora di più quando il paese che tifi vince il campionato!",
+      "video_title": "🔴 FIFA LIVE The Best FIFA Football Awards™ 2025 | Cena di Gala FIFA",
+      "click_to_play": "CLICCA PER RIPRODURRE LO STREAM",
+      "buy_shares_now": "Compra Azioni Ora",
+      "view_teams": "Vedi Squadre del Torneo",
+      "market_tab": "Mercato Mondiali",
+      "market_sub": "Azioni e Indici",
+      "live_tab": "Centro Dati Live",
+      "live_sub": "Risultati e Calendari",
+      "tournament_tab": "Torneo e Squadre",
+      "tournament_sub": "Classifiche e Gruppi",
+      "support_tab": "Support Center",
+      "support_sub": "Mesa Ufficiale",
+      "how_tab": "Come Funziona",
+      "how_sub": "Guida della Piattaforma",
+      "refer_tab": "Invita e Guadagna",
+      "refer_sub": "15% Wallet Bonus",
+      "register": "Registrati",
+      "register_sub": "Crea Account",
+      "login": "Accedi",
+      "login_sub": "Investitore Esistente",
+      "calc_tab": "Calcolatore Azioni",
+      "calc_sub": "Simula Guadagni",
+      "security_title": "Scudo di Sicurezza e Fiducia Inversori",
+      "security_desc": "Supporto collaterale di livello aziendale, nodi di compensazione auditati e sincronizzazione in tempo reale.",
+      "backed_col": "COLLATERALE GARANTITO AL 100%",
+      "audits": "AUDIT CERTIFICATI",
+      "secured": "100% PROTETTO",
+      "index_title": "Indice Tornei e Squadre:",
+      "squads": "⚽ Tutte le Squadre",
+      "trending": "🔥 Di Tendenza"
+    },
+    "日本語 (Japanese)": {
+      "badge": "🏆 世界最高のサッカー株式取引所",
+      "main_title": "お気に入りのワールドカップチームの株式を所有しよう",
+      "main_sub": "チームの株式を購入し、優勝した際に莫大な利益を手に入れましょう！",
+      "millionaire_title": "✨ 億万長者になるための完璧なチャンス！ ✨",
+      "millionaire_desc": "このワールドカップの戦いは人生を永遠に変えるものです！億万長者になるための絶対的に完璧なタイミングと機会です。今すぐ格安の価格で株式を購入し、応援する国が優勝した際により大きなリターンを手にしましょう！",
+      "video_title": "🔴 FIFA ライブ配信 The Best FIFA Football Awards™ 2025 | 授賞記念祝賀会",
+      "click_to_play": "クリックして配信を再生",
+      "buy_shares_now": "今すぐ株式を購入",
+      "view_teams": "トーナメントチームを見る",
+      "market_tab": "サッカー株式市場",
+      "market_sub": "株式＆インデックス",
+      "live_tab": "ライブデータセンター",
+      "live_sub": "日程＆スコア",
+      "tournament_tab": "大会＆全チーム",
+      "tournament_sub": "順位表＆グループ",
+      "support_tab": "サポートセンター",
+      "support_sub": "公式デスク",
+      "how_tab": "ご利用ガイド",
+      "how_sub": "投資ガイダンス",
+      "refer_tab": "友達を招待",
+      "refer_sub": "15%の残高ボーナス",
+      "register": "会員登録",
+      "register_sub": "アカウント新規作成",
+      "login": "ログイン",
+      "login_sub": "既存ユーザー",
+      "calc_tab": "ワールドカップ株計算機",
+      "calc_sub": "シミュレーター",
+      "security_title": "投資家セキュリティ＆信頼シールド",
+      "security_desc": "エンタープライズ保証、監査済み決済ノード、リアルタイム同期システム。",
+      "backed_col": "完全担保裏付け資金",
+      "audits": "コンプライアンス監査完了",
+      "secured": "100% 安全保障",
+      "index_title": "大会＆チーム別インデックス:",
+      "squads": "⚽ すべての代表チーム",
+      "trending": "🔥 急上昇中"
+    },
+    "中文 (Chinese)": {
+      "badge": "🏆 全球领先的足球队股权股票交易中心",
+      "main_title": "购买并拥有您心仪的世界杯国家队股票",
+      "main_sub": "购买队伍股权，若他们夺冠，您将赢得丰厚的超级回报！",
+      "millionaire_title": "✨ 成为百万富翁的绝佳完美机会！ ✨",
+      "millionaire_desc": "这届世界杯即将彻底改变无数人的命运！这是您成为百万富翁的绝对完美时机。现在以极低的极优价格购买股票，在您支持的国家夺冠时赚取数倍的超级巨额回报！",
+      "video_title": "🔴 国际足联现场直播：2025 年度最佳颁奖典礼 | 冠军庆功晚宴",
+      "click_to_play": "点击播放实时直播",
+      "buy_shares_now": "立即购买股票",
+      "view_teams": "查看参赛国家队",
+      "market_tab": "世界杯股市",
+      "market_sub": "个股与大盘指数",
+      "live_tab": "赛事数据中心",
+      "live_sub": "实时赛程与积分",
+      "tournament_tab": "锦标赛与球队",
+      "tournament_sub": "小组赛出线形势",
+      "support_tab": "客服中心",
+      "support_sub": "官方交易支持",
+      "how_tab": "运作原理",
+      "how_sub": "新手入市指南",
+      "refer_tab": "邀请新客赢奖",
+      "refer_sub": "得15%钱包充值金",
+      "register": "立即开户",
+      "register_sub": "注册新投资账户",
+      "login": "登录交易",
+      "login_sub": "老客户登录",
+      "calc_tab": "世界杯股票收益计算器",
+      "calc_sub": "预估投资回报",
+      "security_title": "安全风控与投资者信托防护盾",
+      "security_desc": "企业级全额准备金保障、链上审计清算节点和实时订单轧差对账系统。",
+      "backed_col": "准备金全额支持",
+      "audits": "合规清算审计",
+      "secured": "100% 投资安全保障",
+      "index_title": "锦标赛与参赛队索引:",
+      "squads": "⚽ 查看全部国家队",
+      "trending": "🔥 热门榜单"
+    },
+    "Türkçe (Turkish)": {
+      "badge": "🏆 DÜNYANIN EN İYİ FUTBOL HİSSE SENEDİ BORSASI",
+      "main_title": "Favori Dünya Kupası Takımınızın Hisselerine Sahip Olun",
+      "main_sub": "Şampiyon olurlarsa büyük kazanmak için takımların hisselerini satın alın!",
+      "millionaire_title": "✨ MİLYONER OLMAK İÇİN MÜKEMMEL BİR FIRSAT! ✨",
+      "millionaire_desc": "Bu Dünya Kupası maçı hayatları sonsuza dek değiştirmek için geliyor! Milyoner olmak için mutlak mükemmel zamanınız ve fırsatınız. Şimdi hisseleri ultra ucuz fiyattan satın alın ve desteklediğiniz ülke şampiyon olduğunda daha büyük kazanın!",
+      "video_title": "🔴 FIFA CANLI YAYIN The Best FIFA Football Awards™ 2025 | FIFA Kutlama Yemeği",
+      "click_to_play": "YAYINI BAŞLATMAK İÇİN TIKLAYIN",
+      "buy_shares_now": "Hisse Satın Al",
+      "view_teams": "Turnuva Takımlarını Gör",
+      "market_tab": "Dünya Kupası Borsası",
+      "market_sub": "Hisseler & Endeksler",
+      "live_tab": "Canlı Veri Merkezi",
+      "live_sub": "Fikstürler & Skorlar",
+      "tournament_tab": "Turnuva & Takımlar",
+      "tournament_sub": "Puan Durumu & Gruplar",
+      "support_tab": "Destek Merkezi",
+      "support_sub": "Resmi Masa",
+      "how_tab": "Nasıl Çalışır",
+      "how_sub": "Platform Kılavuzu",
+      "refer_tab": "Davet Et & Kazan",
+      "refer_sub": "%15 Cüzdan Bonusu",
+      "register": "Kayıt Ol",
+      "register_sub": "Hesap Oluştur",
+      "login": "Giriş Yap",
+      "login_sub": "Yatırımcı Girişi",
+      "calc_tab": "Dünya Kupası Hesaplayıcı",
+      "calc_sub": "Getiriyi Hesapla",
+      "security_title": "Yatırımcı Güvenliği & Güven Kalkanı",
+      "security_desc": "Kurumsal düzeyde teminat desteği, denetlenmiş güvenlik takas düğümleri ve eş zamanlı transfer akışları.",
+      "backed_col": "TAM TEMİNAT GARANTİLİ",
+      "audits": "UYUMLULUK DENETİMLERİ",
+      "secured": "%100 GÜVENLİ",
+      "index_title": "Turnuva & Takım Endeksi:",
+      "squads": "⚽ Tüm Kadrolar",
+      "trending": "🔥 Trendler"
+    },
+    "Nederlands (Dutch)": {
+      "badge": "🏆 'S WERELDS BESTE VOETBAL AANDELENMARKT",
+      "main_title": "Bezit Aandelen in Jouw Favoriete WK-Team",
+      "main_sub": "Koop aandelen in teams om groots te winnen als ze kampioen worden!",
+      "millionaire_title": "✨ DE PERFECTE KANS OM MILJONAIR TE WORDEN! ✨",
+      "millionaire_desc": "Dit WK is er om levens voorgoed te veranderen! Dit is jouw absolute perfecte moment en kans om miljonair te worden. Koop nu aandelen tegen een ultra-goedkoop tarief en win groter wanneer het land dat jij steunt het kampioenschap wint!",
+      "video_title": "🔴 FIFA LIVE The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner",
+      "click_to_play": "KLIK OM STREAM AF TE SPELEN",
+      "buy_shares_now": "Koop Aandelen Nu",
+      "view_teams": "Bekijk Toernooiteams",
+      "market_tab": "Wereldbeker Markt",
+      "market_sub": "Aandelen & Indexen",
+      "live_tab": "Live Wedstrijdcentrum",
+      "live_sub": "Uitslagen & Standen",
+      "tournament_tab": "Toernooi & Teams",
+      "tournament_sub": "Groepen & Stand",
+      "support_tab": "Support desk",
+      "support_sub": "Officiële Support",
+      "how_tab": "Hoe het werkt",
+      "how_sub": "Platform Handleiding",
+      "refer_tab": "Nieuwe Klant Actie",
+      "refer_sub": "15% Bonus Saldo",
+      "register": "Registreren",
+      "register_sub": "Account Aanmaken",
+      "login": "Inloggen",
+      "login_sub": "Bestaande Belegger",
+      "calc_tab": "WK Aandelenrechner",
+      "calc_sub": "Simuleer Rendement",
+      "security_title": "Investor Security & Safe Shield",
+      "security_desc": "Institutionele vermogensdekking, doorlopend gecertificeerde clearing-nodes en realtime synchronisatie.",
+      "backed_col": "100% GEDEKT VERMOGEN",
+      "audits": "GECERTIFICEERDE AUDITS",
+      "secured": "100% BEVEILIGD",
+      "index_title": "Toernooien & Teams Index:",
+      "squads": "⚽ Alle Selecties",
+      "trending": "🔥 Trending"
+    },
+    "Русский (Russian)": {
+      "badge": "🏆 ЛУЧШАЯ В МИРЕ БИРЖА ФУТБОЛЬНЫХ АКЦИЙ",
+      "main_title": "Владейте акциями своей любимой сборной ЧМ",
+      "main_sub": "Покупайте акции команд, чтобы выиграть по-крупному, если они станут чемпионами!",
+      "millionaire_title": "✨ ИДЕАЛЬНЫЙ ШАНС СТАТЬ МИЛЛИОНЕРОМ! ✨",
+      "millionaire_desc": "Этот чемпионат мира призван изменить жизни навсегда! Это ваше абсолютно идеальное время и возможность стать миллионером. Покупайте акции прямо сейчас по сверхнизким ценам и выигрывайте по-крупному, когда страна, которую вы поддерживаете, завоюет кубок!",
+      "video_title": "🔴 FIFA LIVE Церемония наград The Best FIFA Football Awards™ 2025 | Праздничный ужин в эфире",
+      "click_to_play": "НАЖМИТЕ ДЛЯ ПРОСМОТРА ТРАНСЛЯЦИИ",
+      "buy_shares_now": "Купить акции сейчас",
+      "view_teams": "Посмотреть все сборные",
+      "market_tab": "Рынок ЧМ",
+      "market_sub": "Акции и Индексы",
+      "live_tab": "Центр матчей ЧМ",
+      "live_sub": "Счет и Расписание",
+      "tournament_tab": "Турнир и Команды",
+      "tournament_sub": "Таблицы и Группы",
+      "support_tab": "Техподдержка",
+      "support_sub": "Официальный стол",
+      "how_tab": "Как это работает",
+      "how_sub": "Руководство инвестора",
+      "refer_tab": "Партнерская программа",
+      "refer_sub": "15% Бонус на баланс",
+      "register": "Регистрация",
+      "register_sub": "Открыть счет",
+      "login": "Вход",
+      "login_sub": "Для инвесторов",
+      "calc_tab": "Калькулятор доходности",
+      "calc_sub": "Моделировать прибыль",
+      "security_title": "Щит безопасности инвесторов и траст",
+      "security_desc": "Обеспечение ликвидности институционального уровня, аудит расчетных узлов клиринга и трансляция в реальном времени.",
+      "backed_col": "ОБЕСПЕЧЕНИЕ НА 100%",
+      "audits": "РЕГУЛЯРНЫЕ АУДИТЫ",
+      "secured": "100% ЗАЩИЩЕНО",
+      "index_title": "Каталог турниров и сборных:",
+      "squads": "⚽ Все сборные",
+      "trending": "🔥 Тренды дня"
+    },
+    "한국어 (Korean)": {
+      "badge": "🏆 세계 최고의 축구 국가대표팀 주식 거래소",
+      "main_title": "당신이 사랑하는 월드컵 국가대표팀의 주주가 되십시오",
+      "main_sub": "팀 주식을 매수하고, 해당 국가가 챔피언이 되었을 때 엄청난 이익을 차지하십시오!",
+      "millionaire_title": "✨ 백만장자가 될 수 있는 절대적인 절호의 기회! ✨",
+      "millionaire_desc": "이번 월드컵 경기는 인생을 영원히 바꿀 것입니다! 백만장자가 될 수 있는 완벽한 시기이자 기회입니다. 지금 매우 저렴한 우대 가격으로 주식을 선점하고, 응원하는 국가가 우승 트로피를 차지할 때 엄청난 잭팟을 터뜨리십시오!",
+      "video_title": "🔴 FIFA 생중계: 2025 더 베스트 FIFA 풋볼 어워드™ | 우승 축하 디너 갈라쇼",
+      "click_to_play": "클릭하여 실시간 중계 보기",
+      "buy_shares_now": "국가대표팀 주식 매수하기",
+      "view_teams": "토너먼트 참가팀 확인",
+      "market_tab": "월드컵 주식시장",
+      "market_sub": "대표주 & 인덱스",
+      "live_tab": "실시간 데이터 센터",
+      "live_sub": "경기 일정 및 라이브 스코어",
+      "tournament_tab": "대회 현황 및 팀",
+      "tournament_sub": "그룹 스테이지 및 순위",
+      "support_tab": "고객지원팀",
+      "support_sub": "공식 전용창구",
+      "how_tab": "이용방법 가이드",
+      "how_sub": "투자 교육 매뉴얼",
+      "refer_tab": "초대코드 리워드",
+      "refer_sub": "예치금 15% 보너스 지급",
+      "register": "회원가입",
+      "register_sub": "계좌 신규 개설",
+      "login": "로그인",
+      "login_sub": "기존 주주 로그인",
+      "calc_tab": "월드컵 주식 계산기",
+      "calc_sub": "시뮬레이션 도구",
+      "security_title": "투자자 자산 보안 및 신뢰 보호막",
+      "security_desc": "기업 및 글로벌 등급의 전액 담보 제공 보증금, 감사 완료된 실시간 거래소 체결 청산 노드 가동.",
+      "backed_col": "100% 예치금 지급 준비 완료",
+      "audits": "정기 청산 안정성 감사 완료",
+      "secured": "100% 자산 보호 처리됨",
+      "index_title": "锦标赛 및 대표팀 인덱스:",
+      "squads": "⚽ 전체 국가대표팀 스쿼드",
+      "trending": "🔥 화제의 급상승 종목"
+    }
+  };
 
-    const interval = setInterval(() => {
-      const now = new Date();
-      const difference = targetDate.getTime() - now.getTime();
+  const tLocal = (key: string) => {
+    const langDict = translations[activeLanguage] || translations['English'];
+    return langDict[key] || translations['English'][key] || key;
+  };
 
-      if (difference <= 0) {
-        clearInterval(interval);
-        return;
-      }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-      setTimeLeft({ days, hours, minutes, seconds });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const isRTL = activeLanguage === 'العربية (Arabic)';
 
   return (
-    <div className="relative overflow-hidden bg-transparent text-[#eaeaea] font-sans">
+    <div className="relative pb-1" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
       
-      {/* Completely clear with no dark overlays covering the trophy and background */}
-      <div className="absolute inset-0 bg-transparent pointer-events-none" />
-
-      {/* Main Content Area - Center Aligned strictly matching mockup screenshot */}
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20 md:pt-32 md:pb-28 text-center flex flex-col items-center">
+      {/* Immersive Stadium Hero Background Wrapper */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6 text-center">
         
-        {/* World's Best Football Stock Marketplace Badge */}
-        <div className="inline-flex items-center space-x-2 bg-[#d4af37]/15 border border-[#d4af37]/40 px-4 py-1.5 rounded-full text-xs font-semibold text-[#d4af37] tracking-wider uppercase font-display mb-6 select-none">
-          <Trophy className="w-3.5 h-3.5 text-[#d4af37]" />
-          <span>World's Best Football Stock Marketplace</span>
+        {/* Centered Golden Badge Pill */}
+        <div className="inline-flex items-center space-x-2 bg-[#d4af37]/10 border border-[#d4af37]/35 rounded-full px-5 py-2 mb-6 shadow-[0_0_15px_rgba(212,175,55,0.1)] select-none">
+          <span className="text-[10px] sm:text-xs font-black tracking-widest text-[#d4af37] font-sans">
+            {tLocal('badge')}
+          </span>
         </div>
 
-        {/* Main Title heading matching screenshot */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black font-display leading-[1.08] tracking-tight text-white select-none max-w-4xl mb-6">
-          Own Shares In Your <br/>
-          <span className="bg-gradient-to-r from-[#d4af37] via-[#f3e3a1] to-[#c5a02e] text-transparent bg-clip-text">
-            Favorite World Cup Team
-          </span>
+        {/* Dynamic Display Typography Headings */}
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white font-display uppercase tracking-tight leading-[0.95] mb-4.5 max-w-5xl mx-auto drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+          {tLocal('main_title')}
         </h1>
 
-        {/* Subtitle matching screenshot with motivating advertising tone */}
-        <div className="text-center select-none mb-12 max-w-3xl px-2">
-          <p className="text-xl sm:text-2xl text-white font-black leading-relaxed tracking-wide mb-5">
-            Buy shares in teams to win big if they become champions!
-          </p>
-          <div className="mt-5 bg-gradient-to-br from-[#d4af37]/20 via-[#d4af37]/5 to-black border-2 border-[#d4af37] rounded-3xl p-6 sm:p-8 shadow-[0_10px_30px_rgba(212,175,55,0.15)] relative overflow-hidden backdrop-blur-md">
-            <p className="text-yellow-400 text-base sm:text-lg font-black uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
-              ✨ Perfect Opportunity to Become a Millionaire! ✨
-            </p>
-            <p className="text-white text-sm sm:text-base font-bold leading-relaxed max-w-2xl mx-auto">
-              This World Cup match is coming to change lives forever! It is your absolute perfect time and opportunity to become a millionaire. Buy shares now at an ultra-cheaper rate and win bigger when the country you support wins the championship!
+        <p className="text-sm sm:text-lg md:text-xl font-bold text-gray-300 tracking-wide max-w-3xl mx-auto mb-9 font-sans drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+          {tLocal('main_sub')}
+        </p>
+
+        {/* Glowing Perfect Opportunity Millionaire Container */}
+        <div className="w-full max-w-4xl mx-auto mb-11 p-[1.5px] rounded-2xl bg-gradient-to-r from-[#ffd700]/40 via-[#222c42]/80 to-[#ffd700]/40 shadow-[0_10px_40px_rgba(212,175,55,0.15)] select-none">
+          <div className="bg-gradient-to-b from-[#111726]/98 to-[#0b0e17]/98 rounded-[15px] p-6 sm:p-8 text-center border border-white/5">
+            <h3 className="text-sm sm:text-base font-black text-[#ffd053] font-display uppercase tracking-wider mb-2.5">
+              {tLocal('millionaire_title')}
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-sans max-w-3xl mx-auto">
+              {tLocal('millionaire_desc')}
             </p>
           </div>
         </div>
 
-        {/* ==================== LARGE PROFESSIONAL YOUTUBE VIDEO SECTION ==================== */}
-        <div id="hero-presentation-video" className="w-full max-w-4xl px-2 mb-12 select-none">
-          <div className="relative bg-[#0d111c] border-2 border-[#d4af37] rounded-3xl shadow-[0_20px_50px_rgba(212,175,55,0.25)] overflow-hidden">
-            
-            {/* Top Info Bar */}
-            <div className="bg-[#111625] border-b border-[#2d364d] px-4 py-3 flex justify-between items-center">
-              <div className="flex items-center space-x-2.5">
-                <span className="relative flex h-3.5 w-3.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500"></span>
-                </span>
-                <span className="text-[10px] font-mono font-black text-red-500 uppercase tracking-widest">FIFA LIVE</span>
-                <span className="text-xs font-bold text-gray-200 hidden sm:inline truncate max-w-sm">
-                  The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner
-                </span>
-              </div>
+        {/* Fully Interactive FIFA LIVE Streaming & Award Presentation Video Hub */}
+        <div id="hero-presentation-video" className="w-full max-w-4xl mx-auto bg-[#0a0d16] border-2 border-[#d4af37] rounded-2xl overflow-hidden shadow-[0_0_35px_rgba(212,175,55,0.25)] mb-11 select-none">
+          {/* Top video panel status bar */}
+          <div className="bg-[#101423] px-4 py-3 border-b border-[#d4af37]/30 flex items-center justify-between text-left">
+            <div className="flex items-center space-x-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0" />
+              <span className="font-extrabold text-xs sm:text-sm text-white font-sans tracking-wide uppercase leading-none">
+                {tLocal('video_title')}
+              </span>
             </div>
+            <div className="hidden sm:flex items-center space-x-1 px-2.5 py-0.5 bg-red-600 rounded text-[9px] font-black text-white uppercase tracking-wider">
+              Live Stream
+            </div>
+          </div>
 
-            {/* Video Body */}
-            <div className="aspect-video w-full relative bg-black">
-              {!playClicked ? (
-                <div 
-                  className="absolute inset-0 w-full h-full cursor-pointer relative overflow-hidden flex items-center justify-center group" 
-                  onClick={() => setPlayClicked(true)}
-                >
-                  {/* Background image: high-quality guaranteed thumbnail */}
-                  <img 
-                    src="https://img.youtube.com/vi/8bK6aFcsAO4/hqdefault.jpg" 
-                    alt="The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner Thumbnail"
-                    className="absolute inset-0 w-full h-full object-cover opacity-85 transition-transform duration-700 group-hover:scale-105"
-                    referrerPolicy="no-referrer"
-                  />
-                  
-                  {/* Dark gradient shadow */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/60" />
-                  
-                  {/* Big glowing custom YouTube Play Button */}
-                  <div className="relative z-10 flex flex-col items-center space-y-4">
-                    <div className="w-20 h-20 bg-red-600 hover:bg-red-500 rounded-2xl flex items-center justify-center shadow-[0_10px_35px_rgba(220,38,38,0.6)] border border-white/20 transition-all duration-300 transform group-hover:scale-110 active:scale-95">
-                      <Play className="w-10 h-10 text-white fill-white ml-1.5" />
-                    </div>
-                    <span className="text-xs font-black text-white tracking-widest uppercase px-3.5 py-2 bg-black/80 border border-[#d4af37]/45 rounded-lg backdrop-blur-sm">
-                      Click to Play Stream
-                    </span>
-                  </div>
-
-                  {/* Quick Badge overlay */}
-                  <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-red-600 text-white font-mono text-[10px] font-black uppercase tracking-widest rounded-md flex items-center gap-1.5 shadow-md">
-                    <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
-                    <span>LIVE STREAM</span>
-                  </div>
+          {/* Interactive Player Frame */}
+          <div className="relative aspect-video w-full bg-[#05060b] flex items-center justify-center">
+            {!playClicked ? (
+              <div 
+                className="absolute inset-0 w-full h-full cursor-pointer flex flex-col items-center justify-center bg-cover bg-center group"
+                style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url("/image-2.jpg")' }}
+                onClick={() => setPlayClicked(true)}
+              >
+                {/* Big pulse play icon inside a premium circle button */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.5)] transition-all transform hover:scale-110 group-hover:scale-110 active:scale-95 duration-200 cursor-pointer">
+                  <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-current translate-x-0.5" />
                 </div>
-              ) : (
-                <iframe
-                  id="presentation-video-frame"
-                  className="w-full h-full"
-                  src="https://www.youtube.com/embed/8bK6aFcsAO4?autoplay=1&rel=0&modestbranding=1"
-                  title="The Best FIFA Football Awards™ 2025 | FIFA Celebration Dinner"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                ></iframe>
-              )}
-            </div>
-
+                <button
+                  className="mt-4 px-6 py-2.5 bg-black/80 hover:bg-[#d4af37] border border-[#d4af37] hover:border-black rounded-full text-white hover:text-black font-extrabold font-mono text-xs tracking-widest uppercase transition-all shadow-[0_4px_15px_rgba(0,0,0,0.4)] cursor-pointer"
+                >
+                  {tLocal('click_to_play')}
+                </button>
+              </div>
+            ) : (
+              <iframe 
+                id="hero-presentation-video-frame"
+                className="w-full h-full"
+                src="https://www.youtube.com/embed/g6bE49qD_Wc?autoplay=1" 
+                title="FIFA Live Stream Presentation"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            )}
           </div>
         </div>
 
@@ -164,90 +606,184 @@ export default function HeroSection({
             onClick={onNavigateToMarket}
             className="px-10 py-3.5 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-bold font-display text-xs rounded-lg shadow-[0_8px_30px_rgba(212,175,55,0.25)] hover:from-white hover:to-[#fbbf24] transition-all duration-300 transform active:scale-95 cursor-pointer uppercase tracking-wider"
           >
-            Buy Shares Now
+            {tLocal('buy_shares_now')}
           </button>
           
           <button
             onClick={onNavigateToTournament || onNavigateToMarket}
             className="px-8 py-3.5 bg-[#141822] hover:bg-[#1f2433] border border-[#2e3545] rounded-lg text-white font-medium text-xs transition-all duration-200 text-center cursor-pointer uppercase tracking-wider"
           >
-            View Tournament Teams
+            {tLocal('view_teams')}
           </button>
         </div>
 
         {/* ==================== PROFESSIONAL INVESTOR NAVIGATION MENU ==================== */}
-        <div id="investor-navigation-menu" className="w-full max-w-5xl bg-[#0b0e17]/95 border-2 border-[#d4af37] rounded-2xl p-2 sm:p-3 shadow-[0_0_30px_rgba(212,175,55,0.2)] mb-10 select-none">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 w-full">
+        <div id="investor-navigation-menu" className="w-full max-w-5xl bg-[#0b0e17]/95 border-2 border-[#d4af37] rounded-2xl p-2 sm:p-3 shadow-[0_0_30px_rgba(212,175,55,0.2)] mb-10 select-none mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 w-full text-left">
             
-            <button
-              onClick={() => {
-                if (onNavigateToSection) onNavigateToSection('market');
-                else onNavigateToMarket();
-              }}
-              className="flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#121623] hover:bg-[#1b2135] border border-transparent hover:border-[#d4af37]/50 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
-            >
-              <TrendingUp className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
-              <div className="text-center md:text-left">
-                <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">World Cup Market</span>
-                <span className="hidden md:block text-[9px] text-[#d4af37]/85 font-medium">Equities & Indexes</span>
-              </div>
-            </button>
+            {/* Column 1: World Cup Market */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  if (onNavigateToSection) onNavigateToSection('market');
+                  else onNavigateToMarket();
+                }}
+                className="h-full flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#121623] hover:bg-[#1b2135] border border-transparent hover:border-[#d4af37]/50 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
+              >
+                <TrendingUp className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
+                <div className="text-center md:text-left">
+                  <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">{tLocal('market_tab')}</span>
+                  <span className="hidden md:block text-[9px] text-[#d4af37]/85 font-medium">{tLocal('market_sub')}</span>
+                </div>
+              </button>
+            </div>
 
-            <button
-              onClick={() => onNavigateToSection?.('live-data')}
-              className="flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#121623] hover:bg-[#1b2135] border border-transparent hover:border-[#d4af37]/50 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
-            >
-              <Activity className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
-              <div className="text-center md:text-left">
-                <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">Live Data Center</span>
-                <span className="hidden md:block text-[9px] text-[#d4af37]/85 font-medium">Fixtures & Scores</span>
-              </div>
-            </button>
+            {/* Column 2: Live Data Center */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => onNavigateToSection?.('live-data')}
+                className="h-full flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#121623] hover:bg-[#1b2135] border border-transparent hover:border-[#d4af37]/50 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
+              >
+                <Activity className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
+                <div className="text-center md:text-left">
+                  <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">{tLocal('live_tab')}</span>
+                  <span className="hidden md:block text-[9px] text-[#d4af37]/85 font-medium">{tLocal('live_sub')}</span>
+                </div>
+              </button>
+            </div>
 
-            <button
-              onClick={() => {
-                if (onNavigateToSection) onNavigateToSection('tournament');
-                else if (onNavigateToTournament) onNavigateToTournament();
-              }}
-              className="flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#121623] hover:bg-[#1b2135] border border-transparent hover:border-[#d4af37]/50 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
-            >
-              <Trophy className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
-              <div className="text-center md:text-left">
-                <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">Tournament & Teams</span>
-                <span className="hidden md:block text-[9px] text-[#d4af37]/85 font-medium">Standings & Groups</span>
-              </div>
-            </button>
+            {/* Column 3: Tournament & Teams (with Support Center under it) */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  if (onNavigateToSection) onNavigateToSection('tournament');
+                  else if (onNavigateToTournament) onNavigateToTournament();
+                }}
+                className="flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#121623] hover:bg-[#1b2135] border border-transparent hover:border-[#d4af37]/50 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
+              >
+                <Trophy className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
+                <div className="text-center md:text-left">
+                  <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">{tLocal('tournament_tab')}</span>
+                  <span className="hidden md:block text-[9px] text-[#d4af37]/85 font-medium">{tLocal('tournament_sub')}</span>
+                </div>
+              </button>
 
-            <button
-              onClick={() => onNavigateToSection?.('how-it-works')}
-              className="flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#121623] hover:bg-[#1b2135] border border-transparent hover:border-[#d4af37]/50 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
-            >
-              <FileText className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
-              <div className="text-center md:text-left">
-                <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">How It Works</span>
-                <span className="hidden md:block text-[9px] text-[#d4af37]/85 font-medium">Platform Guide</span>
-              </div>
-            </button>
+              <button
+                onClick={() => onNavigateToSection?.('support')}
+                className="flex flex-col md:flex-row items-center justify-center gap-2 px-3 py-2 bg-[#121623] hover:bg-[#1b2135] border border-[#d4af37]/25 hover:border-[#d4af37]/60 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
+              >
+                <HelpCircle className="w-4 h-4 text-[#d4af37] group-hover:scale-110 transition-transform shrink-0" />
+                <div className="text-center md:text-left">
+                  <span className="block font-extrabold text-[10px] tracking-wider uppercase text-[#d4af37]">{tLocal('support_tab')}</span>
+                  <span className="hidden md:block text-[8px] text-gray-400 font-medium font-sans">{tLocal('support_sub')}</span>
+                </div>
+              </button>
+            </div>
 
-            <button
-              onClick={() => {
-                if (onTriggerCreateAccount) onTriggerCreateAccount();
-                else onNavigateToSection?.('how-it-works');
-              }}
-              className="col-span-2 md:col-span-1 flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#d4af37] hover:bg-white text-black rounded-xl transition-all transform active:scale-95 cursor-pointer group"
-            >
-              <UserPlus className="w-5 h-5 text-black group-hover:scale-110 transition-transform" />
-              <div className="text-center md:text-left">
-                <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">Create Account</span>
-                <span className="hidden md:block text-[9px] text-black/80 font-medium font-sans">Get $1,000 Test Balance</span>
+            {/* Column 4: How It Works (with Refer & Earn under it) */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => onNavigateToSection?.('how-it-works')}
+                className="flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-4 md:py-3.5 bg-[#121623] hover:bg-[#1b2135] border border-transparent hover:border-[#d4af37]/50 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
+              >
+                <FileText className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
+                <div className="text-center md:text-left">
+                  <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">{tLocal('how_tab')}</span>
+                  <span className="hidden md:block text-[9px] text-[#d4af37]/85 font-medium">{tLocal('how_sub')}</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => onNavigateToSection?.('referral')}
+                className="flex flex-col md:flex-row items-center justify-center gap-2 px-3 py-2 bg-[#121623] hover:bg-[#1b2135] border border-[#d4af37]/25 hover:border-[#d4af37]/60 rounded-xl text-white transition-all transform active:scale-95 cursor-pointer group"
+              >
+                <Gift className="w-4 h-4 text-[#d4af37] group-hover:scale-110 transition-transform shrink-0" />
+                <div className="text-center md:text-left">
+                  <span className="block font-extrabold text-[10px] tracking-wider uppercase text-emerald-400">{tLocal('refer_tab')}</span>
+                  <span className="hidden md:block text-[8px] text-gray-400 font-medium font-sans">{tLocal('refer_sub')}</span>
+                </div>
+              </button>
+            </div>
+
+            {/* Column 5: Create Account, Login, Calculator & Language Drodown */}
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-row gap-2 w-full">
+                <button
+                  onClick={() => {
+                    if (onTriggerCreateAccount) onTriggerCreateAccount();
+                    else onNavigateToSection?.('how-it-works');
+                  }}
+                  className="flex-1 flex flex-col md:flex-row items-center justify-center gap-1.5 px-2.5 py-4 bg-[#d4af37] hover:bg-white text-black rounded-xl transition-all transform active:scale-95 cursor-pointer group"
+                >
+                  <UserPlus className="w-4.5 h-4.5 text-black group-hover:scale-110 transition-transform shrink-0" />
+                  <div className="text-center md:text-left">
+                    <span className="block font-black text-[11px] tracking-wider uppercase leading-none">{tLocal('register')}</span>
+                    <span className="hidden md:block text-[8px] text-black/80 font-semibold font-sans mt-0.5">{tLocal('register_sub')}</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (onTriggerLogin) onTriggerLogin();
+                    else onNavigateToSection?.('how-it-works');
+                  }}
+                  className="flex-1 flex flex-col md:flex-row items-center justify-center gap-1.5 px-2.5 py-4 bg-[#d4af37] hover:bg-white text-black rounded-xl transition-all transform active:scale-95 cursor-pointer group"
+                >
+                  <LogIn className="w-4.5 h-4.5 text-black group-hover:scale-110 transition-transform shrink-0" />
+                  <div className="text-center md:text-left">
+                    <span className="block font-black text-[11px] tracking-wider uppercase leading-none">{tLocal('login')}</span>
+                    <span className="hidden md:block text-[8px] text-black/80 font-semibold font-sans mt-0.5">{tLocal('login_sub')}</span>
+                  </div>
+                </button>
               </div>
-            </button>
+
+              <button
+                onClick={() => onNavigateToSection?.('calculator')}
+                className="flex flex-col md:flex-row items-center justify-center gap-2.5 px-4 py-3 bg-gradient-to-b from-[#ffdf8a] to-[#d4af37] hover:bg-white text-black rounded-xl transition-all transform active:scale-95 cursor-pointer group animate-pulse"
+              >
+                <TrendingUp className="w-5 h-5 text-black group-hover:scale-110 transition-transform shrink-0" />
+                <div className="text-center md:text-left">
+                  <span className="block font-black text-xs sm:text-xs tracking-wider uppercase">{tLocal('calc_tab')}</span>
+                  <span className="hidden md:block text-[9px] text-black/80 font-medium font-sans">{tLocal('calc_sub')}</span>
+                </div>
+              </button>
+
+              {/* Fully Localized Action Box Language Dropdown beside them */}
+              <div className="w-full bg-[#121623] hover:bg-[#1b2135] border border-[#d4af37]/35 rounded-xl px-2.5 py-2.5 transition-all flex items-center justify-between group">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-[#d4af37]">🌍</span>
+                  <div className="text-left">
+                    <span className="block text-[9px] font-black text-white leading-none tracking-wider uppercase">Language</span>
+                    <span className="block text-[8px] text-gray-400 font-medium">Select Region</span>
+                  </div>
+                </div>
+                <select
+                  value={activeLanguage}
+                  onChange={(e) => onChangeLanguage?.(e.target.value)}
+                  className="bg-[#0b0e17] text-white border border-[#d4af37]/35 rounded px-1.5 py-0.5 text-[10px] font-extrabold cursor-pointer focus:outline-none focus:border-[#d4af37] transition-all"
+                >
+                  <option value="English">English</option>
+                  <option value="العربية (Arabic)">العربية</option>
+                  <option value="Español (Spanish)">Español</option>
+                  <option value="Português (Portuguese)">Português</option>
+                  <option value="Français (French)">Français</option>
+                  <option value="Deutsch (German)">Deutsch</option>
+                  <option value="Italiano (Italian)">Italiano</option>
+                  <option value="日本語 (Japanese)">日本語</option>
+                  <option value="中文 (Chinese)">中文</option>
+                  <option value="Türkçe (Turkish)">Türkçe</option>
+                  <option value="Nederlands (Dutch)">Nederlands</option>
+                  <option value="Русский (Russian)">Русский</option>
+                  <option value="한국어 (Korean)">한국어</option>
+                </select>
+              </div>
+            </div>
 
           </div>
         </div>
 
         {/* ==================== EXTRA HIGH-TRUST SECURITY SHIELD SECTION ==================== */}
-        <div id="investor-security-shield-hub" className="w-full max-w-5xl bg-gradient-to-r from-[#101422] to-[#0a0d16] border border-[#20293d] rounded-2xl p-5 sm:p-6 shadow-xl text-left select-none mb-14">
+        <div id="investor-security-shield-hub" className="w-full max-w-5xl bg-gradient-to-r from-[#101422] to-[#0a0d16] border border-[#20293d] rounded-2xl p-5 sm:p-6 shadow-xl text-left select-none mb-14 mx-auto">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[#22c55e] flex items-center justify-center shrink-0">
@@ -255,62 +791,44 @@ export default function HeroSection({
               </div>
               <div>
                 <h4 className="font-black text-white text-base sm:text-lg lg:text-xl font-display uppercase tracking-wider bg-gradient-to-r from-[#d4af37] to-white bg-clip-text text-transparent">
-                  Investor Security & Trust Shield
+                  {tLocal('security_title')}
                 </h4>
                 <p className="text-xs sm:text-sm text-gray-300 font-medium mt-1">
-                  Enterprise grade collateral backing, audited security clearing nodes, and real-time synchronisation.
+                  {tLocal('security_desc')}
                 </p>
               </div>
             </div>
             <div className="flex gap-2 sm:gap-4 shrink-0 w-full md:w-auto">
               <div className="p-3 bg-neutral-900/60 border-2 border-[#d4af37]/50 rounded-xl flex-1 md:flex-initial text-center md:text-left shadow-[0_0_15px_rgba(212,175,55,0.1)]">
-                <span className="block text-[9px] uppercase tracking-widest text-[#d4af37] font-extrabold font-mono">FULLY BACKED COLLATERAL</span>
+                <span className="block text-[9px] uppercase tracking-widest text-[#d4af37] font-extrabold font-mono">{tLocal('backed_col')}</span>
                 <span className="block text-sm sm:text-base font-black text-white font-mono mt-0.5">$1,000,000,000+ USD</span>
               </div>
               <div className="p-3 bg-neutral-900/60 border border-[#20293d] rounded-xl flex-1 md:flex-initial text-center md:text-left">
-                <span className="block text-[9px] uppercase tracking-widest text-emerald-400 font-extrabold font-mono font-sans">COMPLIANT AUDITS</span>
-                <span className="block text-xs font-black text-emerald-400 font-sans mt-1">100% SECURED</span>
+                <span className="block text-[9px] uppercase tracking-widest text-emerald-400 font-extrabold font-mono font-sans">{tLocal('audits')}</span>
+                <span className="block text-xs font-black text-emerald-400 font-sans mt-1">{tLocal('secured')}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Tournaments & Teams shortcut tab panel (originally sub-menu under buy shares now) */}
-        <div className="flex flex-col items-center gap-5 bg-[#0e1322]/95 backdrop-blur-md border border-[#212f4c] rounded-3xl p-6 sm:p-8 shadow-2xl select-none w-full max-w-5xl">
+        <div className="flex flex-col items-center gap-5 bg-[#0e1322]/95 backdrop-blur-md border border-[#212f4c] rounded-3xl p-6 sm:p-8 shadow-2xl select-none w-full max-w-5xl mx-auto">
           <span className="text-sm sm:text-base font-black text-[#d4af37] uppercase tracking-widest font-sans flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-[#d4af37] animate-pulse" /> Tournaments & Teams Index:
+            <Trophy className="w-5 h-5 text-[#d4af37] animate-pulse" /> {tLocal('index_title')}
           </span>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4.5 w-full mt-2">
-            <button 
-              onClick={onNavigateToTournament} 
-              className="bg-[#18233d] hover:bg-[#223154] border border-[#2f4068] text-white hover:text-[#d4af37] font-extrabold text-sm sm:text-base px-6 py-4.5 rounded-2xl shadow-xl transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer hover:border-[#d4af37]/50 hover:scale-[1.04] active:scale-[0.96]"
-            >
-              🏆 Schedule View
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4.5 max-w-xl mx-auto w-full mt-2">
             <button 
               onClick={() => { onSelectTab?.('all'); onNavigateToMarket(); }} 
               className="bg-[#18233d] hover:bg-[#223154] border border-[#2f4068] text-white hover:text-[#d4af37] font-extrabold text-sm sm:text-base px-6 py-4.5 rounded-2xl shadow-xl transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer hover:border-[#d4af37]/50 hover:scale-[1.04] active:scale-[0.96]"
             >
-              ⚽ All Squads
-            </button>
-            <button 
-              onClick={() => { onSelectTab?.('active'); onNavigateToMarket(); }} 
-              className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/35 text-emerald-400 hover:text-emerald-300 font-extrabold text-sm sm:text-base px-6 py-4.5 rounded-2xl shadow-xl transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer hover:scale-[1.04] active:scale-[0.96]"
-            >
-              🟢 Active
+              {tLocal('squads')}
             </button>
             <button 
               onClick={() => { onSelectTab?.('trending'); onNavigateToMarket(); }} 
               className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/35 text-amber-400 hover:text-amber-300 font-extrabold text-sm sm:text-base px-6 py-4.5 rounded-2xl shadow-xl transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer hover:scale-[1.04] active:scale-[0.96]"
             >
-              🔥 Trending
-            </button>
-            <button 
-              onClick={() => { onSelectTab?.('eliminated'); onNavigateToMarket(); }} 
-              className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/35 text-red-500 hover:text-red-400 font-extrabold text-sm sm:text-base px-6 py-4.5 rounded-2xl shadow-xl transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer hover:scale-[1.04] active:scale-[0.96]"
-            >
-              🔴 Eliminated
+              {tLocal('trending')}
             </button>
           </div>
         </div>

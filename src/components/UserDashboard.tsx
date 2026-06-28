@@ -30,15 +30,7 @@ export default function UserDashboard({
 
   // Dynamic Portfolio Calculations
   const calculatePortfolioValue = () => {
-    let currentHoldingStockValue = 0;
-    holdings.forEach((h) => {
-      const latestCountry = countries.find((c) => c.id === h.countryId);
-      const currentPrice = latestCountry ? latestCountry.currentPrice : h.averagePurchasePrice;
-      if (h.status === 'Active') {
-        currentHoldingStockValue += h.sharesQuantity * currentPrice;
-      }
-    });
-    return currentHoldingStockValue + userCash;
+    return totalHoldingStockValueOnly();
   };
 
   const totalHoldingStockValueOnly = () => {
@@ -91,7 +83,7 @@ export default function UserDashboard({
         </div>
 
         {/* Dynamic Bento statistics grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           
           <div className="bg-[#10131c] p-5 rounded-xl border border-[#202737] shadow-lg">
             <div className="flex justify-between items-start mb-3">
@@ -102,7 +94,7 @@ export default function UserDashboard({
               ${calculatePortfolioValue().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-[10px] text-gray-500 mt-2 font-semibold">
-              Calculated on holdings value (${totalHoldingStockValueOnly().toFixed(2)}) + cash balance
+              Total valuation of your active equity holdings
             </p>
           </div>
 
@@ -130,46 +122,6 @@ export default function UserDashboard({
             <p className="text-[10px] text-gray-500 mt-2 font-semibold">
               Gross payout settled automatically if your teams win the tournament
             </p>
-          </div>
-
-          <div className="bg-[#10131c] p-5 rounded-xl border border-[#202737] shadow-lg flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs uppercase font-bold tracking-widest text-[#8a91a1]">Available Cash</span>
-                <Wallet className="w-4 h-4 text-[#d4af37]" />
-              </div>
-              <div className="text-3xl font-black font-mono text-white tracking-tight">
-                ${userCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-              <p className="text-[10px] text-gray-500 mt-2 font-semibold flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                <span>Fully secured escrow wallet</span>
-              </p>
-            </div>
-            
-            {onDepositFunds && (
-              <div className="mt-4">
-                <button
-                  onClick={async () => {
-                    const amtStr = prompt("Enter amount of USD to deposit into your secure ledger balance ($5 to $10,000):", "1000");
-                    if (!amtStr) return;
-                    const amt = parseFloat(amtStr);
-                    if (isNaN(amt) || amt < 5 || amt > 10000) {
-                      alert("Please enter a valid deposit amount between $5 and $10,000.");
-                      return;
-                    }
-                    try {
-                      await onDepositFunds(amt);
-                    } catch (err) {
-                      alert("Failed to deposit funds. Please try again.");
-                    }
-                  }}
-                  className="w-full py-2 bg-gradient-to-b from-[#fde68a] to-[#d4af37] text-black font-extrabold text-[10px] uppercase tracking-wider rounded-lg hover:from-white hover:to-[#fbbf24] transition-all cursor-pointer flex items-center justify-center space-x-1"
-                >
-                  <span>Buy Shares</span>
-                </button>
-              </div>
-            )}
           </div>
 
         </div>

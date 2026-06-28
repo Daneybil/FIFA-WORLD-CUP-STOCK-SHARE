@@ -5,17 +5,20 @@ import { Search, Sparkles, Star, TrendingUp, Filter, HelpCircle, Calculator, Inf
 interface MarketSectionProps {
   countries: CountryShare[];
   onBuyShares: (country: CountryShare) => void;
-  presetActiveTab?: 'all' | 'trending' | 'speculative' | 'group' | 'active' | 'eliminated';
-  onTabChange?: (tab: 'all' | 'trending' | 'speculative' | 'group' | 'active' | 'eliminated') => void;
+  presetActiveTab?: 'all' | 'trending' | 'speculative' | 'group';
+  onTabChange?: (tab: 'all' | 'trending' | 'speculative' | 'group') => void;
 }
 
 export default function MarketSection({ countries, onBuyShares, presetActiveTab, onTabChange }: MarketSectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [internalActiveTab, setInternalActiveTab] = useState<'all' | 'trending' | 'speculative' | 'group' | 'active' | 'eliminated'>('all');
+  const [internalActiveTab, setInternalActiveTab] = useState<'all' | 'trending' | 'speculative' | 'group'>('all');
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
 
-  const activeTab = presetActiveTab !== undefined ? presetActiveTab : internalActiveTab;
-  const setActiveTab = (tab: 'all' | 'trending' | 'speculative' | 'group' | 'active' | 'eliminated') => {
+  let activeTab = presetActiveTab !== undefined ? presetActiveTab : internalActiveTab;
+  if (activeTab as string === 'active' || activeTab as string === 'eliminated') {
+    activeTab = 'all';
+  }
+  const setActiveTab = (tab: 'all' | 'trending' | 'speculative' | 'group') => {
     if (onTabChange) {
       onTabChange(tab);
     } else {
@@ -140,26 +143,6 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
                 >
                   🏆 Group Stage
                 </button>
-                <button
-                  onClick={() => { setActiveTab('active'); setSelectedGroup('All'); }}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === 'active'
-                      ? 'bg-emerald-600 text-white font-bold'
-                      : 'bg-[#181f2f] text-emerald-400 hover:text-emerald-200'
-                  }`}
-                >
-                  🟢 Active Shares
-                </button>
-                <button
-                  onClick={() => { setActiveTab('eliminated'); setSelectedGroup('All'); }}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === 'eliminated'
-                      ? 'bg-red-650 text-white font-bold'
-                      : 'bg-[#181f2f] text-red-400 hover:text-red-200'
-                  }`}
-                >
-                  🔴 Eliminated Shares
-                </button>
               </div>
 
               {/* Dynamic Search Box */}
@@ -251,43 +234,17 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
                           </span>
                         </div>
 
-                        {/* Tournament Status & Prep API Stats Row */}
-                        <div className="flex items-center justify-between mt-2.5 mb-2 bg-[#171d2b]/60 px-2.5 py-1.5 rounded-lg border border-[#232b3d]/40">
-                          <span className={`text-[9px] px-2 py-0.5 font-bold rounded tracking-wider uppercase ${
+                        {/* Tournament Status Row */}
+                        <div className="flex items-center justify-start mt-2.5 mb-3">
+                          <span className={`text-[10px] px-2.5 py-1 font-bold rounded tracking-wider uppercase border ${
                             country.status === 'CHAMPION' 
-                              ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30 font-extrabold animate-pulse'
+                              ? 'bg-amber-400/20 text-amber-300 border-amber-400/30 font-extrabold animate-pulse'
                               : country.status === 'ELIMINATED'
-                              ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                              : 'bg-green-500/15 text-green-400 border border-green-500/20'
+                              ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                              : 'bg-green-500/15 text-green-400 border-green-500/20'
                           }`}>
                             {country.status || 'ACTIVE'}
                           </span>
-                          
-                          <div className="text-[9px] text-[#8fa0c0] font-mono flex items-center gap-2">
-                            <span>Played: <strong className="text-white">{country.statistics.matchesPlayed ?? 0}</strong></span>
-                            <span>|</span>
-                            <span>GF: <strong className="text-white">{country.statistics.goalsScored}</strong></span>
-                          </div>
-                        </div>
-
-                        {/* Detailed Football-Data API Stats Breakdown */}
-                        <div className="grid grid-cols-4 gap-1 text-center bg-[#10141f] p-1.5 rounded-lg border border-[#1f2638] mb-3 text-[9px] font-mono">
-                          <div>
-                            <span className="block text-gray-500 text-[8px] uppercase">Wins</span>
-                            <strong className="text-white">{country.statistics.wins}</strong>
-                          </div>
-                          <div>
-                            <span className="block text-gray-500 text-[8px] uppercase">Draws</span>
-                            <strong className="text-white">{country.statistics.draws}</strong>
-                          </div>
-                          <div>
-                            <span className="block text-gray-500 text-[8px] uppercase">Losses</span>
-                            <strong className="text-white">{country.statistics.losses}</strong>
-                          </div>
-                          <div>
-                            <span className="block text-gray-400 text-[8px] uppercase">GA</span>
-                            <strong className="text-red-400">{country.statistics.goalsConceded}</strong>
-                          </div>
                         </div>
                       </div>
 

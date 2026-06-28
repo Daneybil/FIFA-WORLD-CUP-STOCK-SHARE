@@ -14,10 +14,16 @@ import {
 
 interface AuthSectionProps {
   onAuthSuccess: (user: { email: string; displayName: string; uid: string }) => void;
+  defaultIsSignUp?: boolean;
 }
 
-export default function AuthSection({ onAuthSuccess }: AuthSectionProps) {
-  const [isSignUp, setIsSignUp] = useState(false);
+export default function AuthSection({ onAuthSuccess, defaultIsSignUp = false }: AuthSectionProps) {
+  const [isSignUp, setIsSignUp] = useState(defaultIsSignUp);
+  
+  // Keep state in sync when prop changes (e.g. user toggles login/register from homepage buttons)
+  React.useEffect(() => {
+    setIsSignUp(defaultIsSignUp);
+  }, [defaultIsSignUp]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');

@@ -51,7 +51,7 @@ export default function SellModal({
         onCompleteSale(sharesToSell, currentValuationToReceive);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Liquidation failed. Secure clearing system rejected the order.");
+      setErrorMsg(err.message || "Liquidation failed. The transaction request could not be processed.");
     } finally {
       setIsSelling(false);
     }

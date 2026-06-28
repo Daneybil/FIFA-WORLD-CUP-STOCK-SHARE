@@ -29,6 +29,9 @@ import TournamentCenter from './components/TournamentCenter';
 import AdminPanel from './components/AdminPanel';
 import AuthSection from './components/AuthSection';
 import HowItWorks from './components/HowItWorks';
+import SupportCenter from './components/SupportCenter';
+import ReferralProgram from './components/ReferralProgram';
+import InvestorCalculator from './components/InvestorCalculator';
 import { TRANSLATIONS } from './translations';
 
 // Firebase Client Imports
@@ -92,12 +95,111 @@ const getFlagEmoji = (tla: string): string => {
 
 export default function App() {
   // Navigation Routing Tab
-  const [activeRoute, setActiveRoute] = useState<'dashboard' | 'market' | 'live-data' | 'tournament' | 'how-it-works' | 'admin' | 'login' | 'portal-dashboard'>('dashboard');
+  const [activeRoute, setActiveRoute] = useState<'dashboard' | 'market' | 'live-data' | 'tournament' | 'how-it-works' | 'admin' | 'login' | 'portal-dashboard' | 'support' | 'referral' | 'calculator'>('dashboard');
   
   // Translation Helper based on the selected language
   const t = (key: string) => {
     const dict = TRANSLATIONS[detectedLanguage] || TRANSLATIONS['English'];
     return dict[key] || TRANSLATIONS['English'][key] || key;
+  };
+
+  // Localized helper for global countdown top bar
+  const tCountdown = (key: string) => {
+    const countdownDicts: Record<string, Record<string, string>> = {
+      "English": {
+        "title": "COUNTDOWN TO GRAND FINAL",
+        "days": "Days",
+        "hours": "Hours",
+        "minutes": "Mins",
+        "seconds": "Secs"
+      },
+      "العربية (Arabic)": {
+        "title": "العد التنازلي للمباراة النهائية",
+        "days": "أيام",
+        "hours": "ساعات",
+        "minutes": "دقائق",
+        "seconds": "ثواني"
+      },
+      "Español (Spanish)": {
+        "title": "CUENTA REGRESIVA PARA LA GRAN FINAL",
+        "days": "Días",
+        "hours": "Horas",
+        "minutes": "Min",
+        "seconds": "Seg"
+      },
+      "Português (Portuguese)": {
+        "title": "CONTAGEM REGRESSIVA PARA A GRANDE FINAL",
+        "days": "Dias",
+        "hours": "Horas",
+        "minutes": "Min",
+        "seconds": "Seg"
+      },
+      "Français (French)": {
+        "title": "COMPTE À REBOURS GRAND FINALE",
+        "days": "Jours",
+        "hours": "Heures",
+        "minutes": "Min",
+        "seconds": "Sec"
+      },
+      "Deutsch (German)": {
+        "title": "COUNTDOWN ZUM GROSSEN FINALE",
+        "days": "Tage",
+        "hours": "Std",
+        "minutes": "Min",
+        "seconds": "Sek"
+      },
+      "Italiano (Italian)": {
+        "title": "CONTO ALLA ROVESCIA FINALE",
+        "days": "Giorni",
+        "hours": "Ore",
+        "minutes": "Min",
+        "seconds": "Sec"
+      },
+      "日本語 (Japanese)": {
+        "title": "グランドファイナルへのカウントダウン",
+        "days": "日",
+        "hours": "時間",
+        "minutes": "分",
+        "seconds": "秒"
+      },
+      "中文 (Chinese)": {
+        "title": "总决赛倒计时",
+        "days": "天",
+        "hours": "时",
+        "minutes": "分",
+        "seconds": "秒"
+      },
+      "Türkçe (Turkish)": {
+        "title": "BÜYÜK FİNAL GERİ SAYIMI",
+        "days": "Gün",
+        "hours": "Saat",
+        "minutes": "Dak",
+        "seconds": "Sn"
+      },
+      "Nederlands (Dutch)": {
+        "title": "AFTELLEN NAAR DE GROTE FINALE",
+        "days": "Dagen",
+        "hours": "Uren",
+        "minutes": "Min",
+        "seconds": "Sec"
+      },
+      "Русский (Russian)": {
+        "title": "ОТСЧЕТ ДО ГРАНД-ФИНАЛА",
+        "days": "Дней",
+        "hours": "Часов",
+        "minutes": "Мин",
+        "seconds": "Сек"
+      },
+      "한국어 (Korean)": {
+        "title": "그랜드 파이널 카운트다운",
+        "days": "일",
+        "hours": "시간",
+        "minutes": "분",
+        "seconds": "초"
+      }
+    };
+    const dict = countdownDicts[detectedLanguage] || countdownDicts['English'];
+    return dict[key] || countdownDicts['English'][key] || key;
   };
   
   // Mobile menu control
@@ -286,18 +388,24 @@ export default function App() {
   // Local numeric states for live market stats ticking and formula updates (adds 10% daily in real-time)
   const [numericMarketCap, setNumericMarketCap] = useState(() => {
     const saved = localStorage.getItem('world_cup_shares_numericMarketCap');
-    return saved ? Number(saved) : 12500000000;
+    if (saved) return Number(saved);
+    const baseDate = new Date('2026-06-01T00:00:00Z').getTime();
+    const elapsedDays = Math.max(0, (Date.now() - baseDate) / (1000 * 60 * 60 * 24));
+    return Math.round(12500000000 * Math.pow(1.018, elapsedDays));
   }); 
   const [numericVolume24h, setNumericVolume24h] = useState(() => {
     const saved = localStorage.getItem('world_cup_shares_numericVolume24h');
-    return saved ? Number(saved) : 450000000;
+    if (saved) return Number(saved);
+    const baseDate = new Date('2026-06-01T00:00:00Z').getTime();
+    const elapsedDays = Math.max(0, (Date.now() - baseDate) / (1000 * 60 * 60 * 24));
+    return Math.round(450000000 * Math.pow(1.025, elapsedDays));
   }); 
   const [numericChange, setNumericChange] = useState(() => {
     const saved = localStorage.getItem('world_cup_shares_numericChange');
     return saved ? Number(saved) : 3.2;
   });
 
-  const [selectedMarketTab, setSelectedMarketTab] = useState<'all' | 'trending' | 'speculative' | 'group' | 'active' | 'eliminated'>('all');
+  const [selectedMarketTab, setSelectedMarketTab] = useState<'all' | 'trending' | 'speculative' | 'group'>('all');
 
   // Football-Data.org Live Synchronizer states
   const [apiLoading, setApiLoading] = useState(false);
@@ -312,6 +420,37 @@ export default function App() {
   const [numStandingsLoaded, setNumStandingsLoaded] = useState<number>(() => Number(localStorage.getItem('world_cup_shares_num_standings_loaded') || '0'));
   const [apiSuccessCount, setApiSuccessCount] = useState<number>(() => Number(localStorage.getItem('world_cup_api_success_count') || '1'));
   const [apiFailedCount, setApiFailedCount] = useState<number>(() => Number(localStorage.getItem('world_cup_api_failed_count') || '0'));
+
+  const [timeLeft, setTimeLeft] = useState({
+    days: 31,
+    hours: 14,
+    minutes: 42,
+    seconds: 19,
+  });
+
+  // Calculate countdown to the Grand World Cup Final - July 19, 2026
+  useEffect(() => {
+    const targetDate = new Date('2026-07-19T18:00:00-07:00'); // final match time
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const difference = targetDate.getTime() - now.getTime();
+
+      if (difference <= 0) {
+        clearInterval(interval);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      } else {
+        const d = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const h = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((difference % (1000 * 60)) / 1000);
+
+        setTimeLeft({ days: d, hours: h, minutes: m, seconds: s });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Regional language detection state with persistent localStorage retrieval
   const [detectedLanguage, setDetectedLanguage] = useState(() => {
@@ -332,8 +471,15 @@ export default function App() {
     try {
       const browserLang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
       const langLower = browserLang.toLowerCase();
+      
+      // Smart timezone checking to detect regions like Egypt or Middle East
+      const tz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone || "" : "";
+      const isArabicRegion = tz.includes("Cairo") || tz.includes("Egypt") || tz.includes("Riyadh") || tz.includes("Dubai") || tz.includes("Baghdad") || tz.includes("Khartoum") || tz.includes("Amman") || tz.includes("Beirut") || tz.includes("Damascus") || tz.includes("Kuwait") || tz.includes("Muscat") || tz.includes("Doha") || tz.includes("Manama") || tz.includes("Tunis") || tz.includes("Algiers") || tz.includes("Rabat") || tz.includes("Tripoli") || tz.includes("Sanaa");
+
       let matchedLang = 'English';
-      if (langLower.startsWith('es')) {
+      if (langLower.startsWith('ar') || isArabicRegion) {
+        matchedLang = 'العربية (Arabic)';
+      } else if (langLower.startsWith('es')) {
         matchedLang = 'Español (Spanish)';
       } else if (langLower.startsWith('pt')) {
         matchedLang = 'Português (Portuguese)';
@@ -345,8 +491,6 @@ export default function App() {
         matchedLang = 'Italiano (Italian)';
       } else if (langLower.startsWith('ja')) {
         matchedLang = '日本語 (Japanese)';
-      } else if (langLower.startsWith('ar')) {
-        matchedLang = 'العربية (Arabic)';
       } else if (langLower.startsWith('zh')) {
         matchedLang = '中文 (Chinese)';
       } else if (langLower.startsWith('ko')) {
@@ -756,6 +900,7 @@ export default function App() {
   const [selectedCountryBuy, setSelectedCountryBuy] = useState<CountryShare | null>(null);
   const [selectedSellHolding, setSelectedSellHolding] = useState<{ holding: ShareHolding; marketPrice: number } | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authIsSignUp, setAuthIsSignUp] = useState(false);
   const [pendingBuyCountry, setPendingBuyCountry] = useState<CountryShare | null>(null);
 
   // Notifications bell popup state
@@ -1108,7 +1253,12 @@ export default function App() {
   };
 
   const handleBuyAction = (country: CountryShare) => {
-    setSelectedCountryBuy(country);
+    if (!currentUser) {
+      setPendingBuyCountry(country);
+      setAuthModalOpen(true);
+    } else {
+      setSelectedCountryBuy(country);
+    }
   };
 
   const markAllAppNotificationsAsRead = () => {
@@ -1206,6 +1356,36 @@ export default function App() {
         <div className="absolute inset-0 bg-transparent pointer-events-none" />
       </div>
 
+      {/* GLOBAL COUNTDOWN TOP BANNER - Professionally placed at the absolute top of the website */}
+      <div className="bg-gradient-to-r from-red-600/25 via-[#d4af37]/30 to-red-600/25 border-b border-[#d4af37]/35 py-2.5 text-center relative z-40 shadow-[0_4px_25px_rgba(212,175,55,0.18)] animate-pulse select-none">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 font-sans">
+          <span className="text-[10px] sm:text-xs font-black tracking-widest text-[#d4af37] font-mono uppercase flex items-center gap-1.5">
+            🏆 {tCountdown('title')}
+          </span>
+          <div className="flex items-center space-x-2.5 sm:space-x-4 font-mono text-white text-xs sm:text-sm">
+            <div className="flex items-baseline space-x-1">
+              <span className="font-black text-[#ffd07d] text-sm sm:text-base">{timeLeft.days}</span>
+              <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">{tCountdown('days')}</span>
+            </div>
+            <span className="text-[#ffd07d]/80 font-black text-sm sm:text-base">:</span>
+            <div className="flex items-baseline space-x-1">
+              <span className="font-black text-[#ffd07d] text-sm sm:text-base">{timeLeft.hours}</span>
+              <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">{tCountdown('hours')}</span>
+            </div>
+            <span className="text-[#ffd07d]/80 font-black text-sm sm:text-base">:</span>
+            <div className="flex items-baseline space-x-1">
+              <span className="font-black text-[#ffd07d] text-sm sm:text-base">{timeLeft.minutes}</span>
+              <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">{tCountdown('minutes')}</span>
+            </div>
+            <span className="text-red-500 font-black text-sm sm:text-base">:</span>
+            <div className="flex items-baseline space-x-1">
+              <span className="font-black text-red-500 text-sm sm:text-base animate-pulse">{timeLeft.seconds}</span>
+              <span className="text-[9px] uppercase tracking-wider text-red-500 font-bold">{tCountdown('seconds')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Dynamic scrolling horizontal market quotes ticker */}
       <div className="relative z-10">
         <MarketTicker countries={countries} />
@@ -1275,12 +1455,39 @@ export default function App() {
               </button>
 
               <button
+                onClick={() => setActiveRoute('calculator')}
+                className={`transition-colors cursor-pointer tracking-wider uppercase ${
+                  activeRoute === 'calculator' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+                }`}
+              >
+                Calculator
+              </button>
+
+              <button
                 onClick={() => setActiveRoute('how-it-works')}
                 className={`transition-colors cursor-pointer tracking-wider uppercase ${
                   activeRoute === 'how-it-works' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
                 }`}
               >
                 {t('nav_how_it_works')}
+              </button>
+
+              <button
+                onClick={() => setActiveRoute('support')}
+                className={`transition-colors cursor-pointer tracking-wider uppercase ${
+                  activeRoute === 'support' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+                }`}
+              >
+                Support Center
+              </button>
+
+              <button
+                onClick={() => setActiveRoute('referral')}
+                className={`transition-colors cursor-pointer tracking-wider uppercase ${
+                  activeRoute === 'referral' ? 'text-white border-b-2 border-[#d4af37] pb-1' : 'hover:text-white'
+                }`}
+              >
+                Refer & Earn
               </button>
 
               {currentUser ? (
@@ -1310,134 +1517,35 @@ export default function App() {
                   🔑 Login / Sign Up
                 </button>
               )}
+
+              {/* Premium Desktop Language Dropdown */}
+              <div className="relative flex items-center space-x-1 pl-3.5 border-l border-white/10">
+                <span className="text-xs text-[#d4af37] font-black">🌍</span>
+                <select
+                  value={detectedLanguage}
+                  onChange={(e) => setDetectedLanguage(e.target.value)}
+                  className="bg-[#0e111a] border border-[#d4af37]/40 hover:border-[#d4af37] rounded px-2 py-1 text-[11px] font-extrabold text-white cursor-pointer focus:outline-none transition-colors"
+                >
+                  <option value="English" className="bg-[#0e111a] text-white">English (US)</option>
+                  <option value="العربية (Arabic)" className="bg-[#0e111a] text-white">العربية (Arabic)</option>
+                  <option value="Español (Spanish)" className="bg-[#0e111a] text-white">Español (Spanish)</option>
+                  <option value="Português (Portuguese)" className="bg-[#0e111a] text-white">Português (Portuguese)</option>
+                  <option value="Français (French)" className="bg-[#0e111a] text-white">Français (French)</option>
+                  <option value="Deutsch (German)" className="bg-[#0e111a] text-white">Deutsch (German)</option>
+                  <option value="Italiano (Italian)" className="bg-[#0e111a] text-white">Italiano (Italian)</option>
+                  <option value="日本語 (Japanese)" className="bg-[#0e111a] text-white">日本語 (Japanese)</option>
+                  <option value="中文 (Chinese)" className="bg-[#0e111a] text-white">中文 (Chinese)</option>
+                  <option value="Türkçe (Turkish)" className="bg-[#0e111a] text-white">Türkçe (Turkish)</option>
+                  <option value="Nederlands (Dutch)" className="bg-[#0e111a] text-white">Nederlands (Dutch)</option>
+                  <option value="Русский (Russian)" className="bg-[#0e111a] text-white">Русский (Russian)</option>
+                  <option value="한국어 (Korean)" className="bg-[#0e111a] text-white">한국어 (Korean)</option>
+                </select>
+              </div>
             </nav>
 
-            {/* Interactive 'Hero ⌄' Golden Dropdown Button strictly matches screenshot */}
+            {/* Desktop header interactive elements (Mobile menu toggle on mobile) */}
             <div className="flex items-center space-x-3.5">
               
-              {/* Note: Live Feed background processes are active, but the visible indicators are removed for elegance */}
-
-              <div className="relative">
-                <button
-                  onClick={() => setHeroDropdownOpen(!heroDropdownOpen)}
-                  className="px-4.5 py-2.5 bg-[#141824] hover:bg-[#1c2235] border border-[#d4af37] rounded-xl flex items-center space-x-2 shadow-[0_0_15px_rgba(212,175,55,0.25)] hover:border-white transition-all transform active:scale-95 cursor-pointer text-[#d4af37] font-extrabold text-xs tracking-wider uppercase font-mono"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  <span>Market Alerts & Controls ⚙️</span>
-                  <span className="text-[8px] font-bold">▼</span>
-                </button>
-
-                {/* Dropdown containing the secure escrow cash, notifications, and compliance options */}
-                {heroDropdownOpen && (
-                  <div className="absolute right-0 mt-3.5 w-80 bg-[#111420]/95 backdrop-blur-xl border border-[#21293c] rounded-xl shadow-2xl p-4.5 space-y-3.5 z-50 text-left">
-                    <div className="text-[10px] uppercase font-bold tracking-widest text-[#d4af37] pb-1 border-b border-[#21293c]">
-                      Operational Controls & Balance
-                    </div>
-                    
-                    {/* Wallet cash */}
-                    <div className="flex items-center justify-between py-1 px-2.5 bg-[#171d2e] rounded-lg border border-[#26314c]">
-                      <span className="text-[10px] font-semibold text-gray-400">Escrow Balance</span>
-                      <span className="text-emerald-400 font-extrabold text-xs">${userCash.toFixed(2)}</span>
-                    </div>
-
-                    {/* Manual Language Selector */}
-                    <div className="flex flex-col space-y-1.5 py-1 px-2.5 bg-[#171d2e] rounded-lg border border-[#26314c] text-left">
-                      <span className="text-[9px] uppercase tracking-wider font-extrabold text-gray-400 font-mono">Platform Locale 🌍</span>
-                      <select
-                        value={detectedLanguage}
-                        onChange={(e) => setDetectedLanguage(e.target.value)}
-                        className="bg-transparent text-xs text-white outline-none border-none py-0.5 font-bold cursor-pointer w-full focus:ring-0"
-                      >
-                        <option value="English" className="bg-[#111420] text-white font-bold text-xs">English (US)</option>
-                        <option value="العربية (Arabic)" className="bg-[#111420] text-white font-bold text-xs">العربية (Arabic)</option>
-                        <option value="Español (Spanish)" className="bg-[#111420] text-white font-bold text-xs font-sans">Español (Spanish)</option>
-                        <option value="Português (Portuguese)" className="bg-[#111420] text-white font-bold text-xs font-sans">Português (Portuguese)</option>
-                        <option value="Français (French)" className="bg-[#111420] text-white font-bold text-xs font-sans">Français (French)</option>
-                      </select>
-                    </div>
-
-                    {/* Official Investor Alerts / Recent Announcements Feed */}
-                    <div className="space-y-1.5 py-2 px-2.5 bg-[#171d2e] rounded-lg border border-[#26314c] text-left max-h-48 overflow-y-auto">
-                      <span className="text-[9px] uppercase tracking-wider font-extrabold text-amber-500 font-mono block mb-1">Live Market Alerts & News</span>
-                      <div className="space-y-1 text-[10px] text-gray-300 divide-y divide-[#21293c]">
-                        <div className="py-1">🏁 USA settle optimized: <span className="text-[#d4af37] font-bold">$200.00</span></div>
-                        <div className="py-1">🏁 Qatar settle optimized: <span className="text-[#d4af37] font-bold">$180.00</span></div>
-                        <div className="py-1">🏁 France settle optimized: <span className="text-[#d4af37] font-bold">$175.00</span></div>
-                        <div className="py-1">🏁 Spain settle optimized: <span className="text-[#d4af37] font-bold">$183.00</span></div>
-                        <div className="py-1 text-emerald-400">📡 FIFA Live API: Operational & Synced</div>
-                        <div className="py-1 text-blue-400">🛡️ Guarantee: fully collateralized escrow</div>
-                      </div>
-                    </div>
-
-                    {/* Notification toggles */}
-                    <div 
-                      className="flex items-center justify-between py-1 px-2.5 bg-[#171d2e] rounded-lg border border-[#26314c] cursor-pointer hover:bg-[#1e253c] transition-colors"
-                      onClick={() => { setNotificationsOpen(!notificationsOpen); setHeroDropdownOpen(false); }}
-                    >
-                      <span className="text-[10px] font-semibold text-gray-400">Notifications Bulletin</span>
-                      {unreadNotifsCount > 0 ? (
-                        <span className="w-5 h-5 rounded-full bg-red-600 text-[10px] text-white flex items-center justify-center font-bold font-mono">
-                          {unreadNotifsCount}
-                        </span>
-                      ) : (
-                        <div className="w-2 h-2 rounded-full bg-gray-500" />
-                      )}
-                    </div>
-
-                    {/* Governance System Access */}
-                    <button
-                      onClick={() => { setActiveRoute('admin'); setHeroDropdownOpen(false); }}
-                      className="w-full py-2 bg-red-950/20 hover:bg-red-950/40 text-red-400 hover:text-red-300 border border-red-500/20 text-[10px] uppercase tracking-widest font-extrabold rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
-                    >
-                      <Lock className="w-3 h-3" />
-                      <span>Governance Control</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Announcements dropdown card fallback when toggled via bulletin inside drop-down */}
-              {notificationsOpen && (
-                <div className="absolute right-4 mt-16 w-80 bg-[#121622] border border-[#22293c] rounded-xl shadow-2xl p-4 space-y-3.5 z-40">
-                  <div className="flex justify-between items-center pb-2.5 border-b border-[#21293c]">
-                    <span className="font-bold text-xs uppercase text-white tracking-wider flex items-center gap-1">
-                      <Bell className="w-3.5 h-3.5 text-amber-500" /> Message Bulletin
-                    </span>
-                    <div className="flex space-x-2 text-[10px] font-semibold text-gray-400">
-                      <button onClick={markAllAppNotificationsAsRead} className="hover:text-amber-400 cursor-pointer">Read All</button>
-                      <span>•</span>
-                      <button onClick={clearAllAppNotifications} className="hover:text-red-400 cursor-pointer">Clear</button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-                    {notifications.length === 0 ? (
-                      <p className="text-center py-6 text-xs text-gray-500">No active bulletins dispatch details.</p>
-                    ) : (
-                      notifications.map((n) => (
-                        <div 
-                          key={n.id} 
-                          onClick={() => {
-                            setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, read: true } : notif));
-                          }}
-                          className={`p-2.5 rounded-lg border text-xs cursor-pointer hover:bg-[#1a2135] transition-all ${
-                            n.read 
-                              ? 'bg-[#0f121b]/40 border-[#1c2230] text-gray-400' 
-                              : 'bg-[#182033] border-blue-500/20 text-white font-medium'
-                          }`}
-                        >
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="font-bold text-[11px] truncate">{n.title}</span>
-                            <span className="text-[9px] text-gray-500 font-mono">{n.timestamp}</span>
-                          </div>
-                          <p className="text-[10px] leading-relaxed text-gray-400">{n.message}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-
               {/* Mobile menu toggle */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -1494,12 +1602,36 @@ export default function App() {
               {t('nav_modis')}
             </button>
             <button
+              onClick={() => { setActiveRoute('calculator'); setMobileMenuOpen(false); }}
+              className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded ${
+                activeRoute === 'calculator' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
+              }`}
+            >
+              Calculator
+            </button>
+            <button
               onClick={() => { setActiveRoute('how-it-works'); setMobileMenuOpen(false); }}
               className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded ${
                 activeRoute === 'how-it-works' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
               }`}
             >
               {t('nav_how_it_works')}
+            </button>
+            <button
+              onClick={() => { setActiveRoute('support'); setMobileMenuOpen(false); }}
+              className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded ${
+                activeRoute === 'support' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
+              }`}
+            >
+              Support Center
+            </button>
+            <button
+              onClick={() => { setActiveRoute('referral'); setMobileMenuOpen(false); }}
+              className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded ${
+                activeRoute === 'referral' ? 'bg-[#141924] text-white' : 'text-[#878e9f]'
+              }`}
+            >
+              Refer & Earn
             </button>
 
             {currentUser ? (
@@ -1530,14 +1662,7 @@ export default function App() {
               </button>
             )}
 
-            <button
-              onClick={() => { setActiveRoute('admin'); setMobileMenuOpen(false); }}
-              className={`py-2 text-xs uppercase tracking-widest font-black text-left pl-3 rounded text-red-500 bg-red-950/5 border border-red-950/10 ${
-                activeRoute === 'admin' ? 'bg-red-950/20 text-red-400' : 'text-[#878e9f]'
-              }`}
-            >
-              Governance Panel
-            </button>
+
 
             {/* Mobile Language Selector */}
             <div className="py-2.5 px-3 bg-[#111420] rounded border border-white/5 text-left flex flex-col space-y-1">
@@ -1545,13 +1670,21 @@ export default function App() {
               <select
                 value={detectedLanguage}
                 onChange={(e) => setDetectedLanguage(e.target.value)}
-                className="bg-transparent text-xs text-white outline-none border-none py-1 font-bold cursor-pointer w-full focus:ring-0"
+                className="bg-[#111420] text-xs text-white outline-none border border-white/10 rounded px-2 py-1 font-bold cursor-pointer w-full focus:ring-0"
               >
                 <option value="English" className="bg-[#111420] text-white">English (US)</option>
                 <option value="العربية (Arabic)" className="bg-[#111420] text-white">العربية (Arabic)</option>
                 <option value="Español (Spanish)" className="bg-[#111420] text-white">Español (Spanish)</option>
                 <option value="Português (Portuguese)" className="bg-[#111420] text-white">Português (Portuguese)</option>
                 <option value="Français (French)" className="bg-[#111420] text-white">Français (French)</option>
+                <option value="Deutsch (German)" className="bg-[#111420] text-white">Deutsch (German)</option>
+                <option value="Italiano (Italian)" className="bg-[#111420] text-white">Italiano (Italian)</option>
+                <option value="日本語 (Japanese)" className="bg-[#111420] text-white">日本語 (Japanese)</option>
+                <option value="中文 (Chinese)" className="bg-[#111420] text-white">中文 (Chinese)</option>
+                <option value="Türkçe (Turkish)" className="bg-[#111420] text-white">Türkçe (Turkish)</option>
+                <option value="Nederlands (Dutch)" className="bg-[#111420] text-white">Nederlands (Dutch)</option>
+                <option value="Русский (Russian)" className="bg-[#111420] text-white">Русский (Russian)</option>
+                <option value="한국어 (Korean)" className="bg-[#111420] text-white">한국어 (Korean)</option>
               </select>
             </div>
           </nav>
@@ -1577,11 +1710,20 @@ export default function App() {
                 setActiveRoute('tournament');
               } else if (section === 'market') {
                 setActiveRoute('market');
+              } else if (section === 'support') {
+                setActiveRoute('support');
+              } else if (section === 'referral') {
+                setActiveRoute('referral');
+              } else if (section === 'calculator') {
+                setActiveRoute('calculator');
               } else {
                 setActiveRoute('dashboard');
               }
             }}
-            onTriggerCreateAccount={() => setAuthModalOpen(true)}
+            onTriggerCreateAccount={() => { setAuthIsSignUp(true); setAuthModalOpen(true); }}
+            onTriggerLogin={() => { setAuthIsSignUp(false); setAuthModalOpen(true); }}
+            activeLanguage={detectedLanguage}
+            onChangeLanguage={setDetectedLanguage}
           />
         )}
 
@@ -1715,7 +1857,7 @@ export default function App() {
             </button>
             <MarketSection
               countries={countries}
-              onBuyShares={(c) => setSelectedCountryBuy(c)}
+              onBuyShares={(c) => handleBuyAction(c)}
               presetActiveTab={selectedMarketTab}
               onTabChange={setSelectedMarketTab}
             />
@@ -1761,7 +1903,7 @@ export default function App() {
               fixtures={fixtures}
               countries={countries}
               holdings={holdings}
-              initialTab="groups"
+              initialTab="overview"
               lastSyncTime={lastSyncTime}
               lastResponseTime={lastResponseTime}
               numTeamsLoaded={numTeamsLoaded}
@@ -1808,6 +1950,22 @@ export default function App() {
           </div>
         )}
 
+        {activeRoute === 'calculator' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 relative z-10 font-sans">
+            <button
+              onClick={() => setActiveRoute('dashboard')}
+              className="mb-4 inline-flex items-center space-x-2 px-4 py-2 bg-[#121622] hover:bg-[#1a2135] text-gray-300 hover:text-white border border-[#232b3e] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <span>← Go Back to Dashboard</span>
+            </button>
+            <InvestorCalculator 
+              countries={countries} 
+              onNavigateMarket={() => setActiveRoute('market')} 
+              activeLanguage={detectedLanguage}
+            />
+          </div>
+        )}
+
         {activeRoute === 'how-it-works' && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 relative z-10 font-sans">
             <button
@@ -1817,6 +1975,79 @@ export default function App() {
               <span>← Go Back to Dashboard</span>
             </button>
             <HowItWorks />
+          </div>
+        )}
+
+        {activeRoute === 'support' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 relative z-10 font-sans pb-16">
+            <button
+              onClick={() => setActiveRoute('dashboard')}
+              className="mb-6 inline-flex items-center space-x-2 px-4 py-2 bg-[#121622] hover:bg-[#1a2135] text-gray-300 hover:text-white border border-[#232b3e] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <span>← Go Back to Dashboard</span>
+            </button>
+            {currentUser ? (
+              <SupportCenter 
+                currentUser={currentUser} 
+                onNavigateLogin={() => setActiveRoute('login')} 
+              />
+            ) : (
+              <div className="max-w-md mx-auto bg-[#0e111a] border border-[#d4af37]/35 rounded-2xl p-6 shadow-2xl space-y-4 text-center">
+                <div className="pb-2">
+                  <span className="text-[10px] text-[#d4af37] font-extrabold tracking-widest uppercase font-mono block">SUPPORT DESK AUTHENTICATION REQUIRED</span>
+                  <h3 className="text-xl font-extrabold text-white font-display uppercase tracking-wider mt-1">Access Restricted</h3>
+                  <p className="text-xs text-gray-400 mt-2 font-mono">
+                    Please log in or register a secure investor account to access our official Technical Support Desk.
+                  </p>
+                </div>
+
+                <AuthSection
+                  onAuthSuccess={(user) => {
+                    setCurrentUser(user);
+                    syncFirebaseData(user.uid);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeRoute === 'referral' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 relative z-10 font-sans pb-16">
+            <button
+              onClick={() => setActiveRoute('dashboard')}
+              className="mb-6 inline-flex items-center space-x-2 px-4 py-2 bg-[#121622] hover:bg-[#1a2135] text-gray-300 hover:text-white border border-[#232b3e] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <span>← Go Back to Dashboard</span>
+            </button>
+            {currentUser ? (
+              <ReferralProgram 
+                currentUser={currentUser} 
+                onNavigateLogin={() => setActiveRoute('login')} 
+                onCompletePurchase={() => {
+                  if (currentUser) {
+                    syncFirebaseData(currentUser.uid);
+                  }
+                }}
+              />
+            ) : (
+              <div className="max-w-md mx-auto bg-[#0e111a] border border-[#d4af37]/35 rounded-2xl p-6 shadow-2xl space-y-4 text-center">
+                <div className="pb-2">
+                  <span className="text-[10px] text-[#d4af37] font-extrabold tracking-widest uppercase font-mono block">REFERRAL SYSTEM AUTHENTICATION REQUIRED</span>
+                  <h3 className="text-xl font-extrabold text-white font-display uppercase tracking-wider mt-1">Access Restricted</h3>
+                  <p className="text-xs text-gray-400 mt-2 font-mono">
+                    Please log in or register a secure investor account to activate your referral profile and view invite bonuses.
+                  </p>
+                </div>
+
+                <AuthSection
+                  onAuthSuccess={(user) => {
+                    setCurrentUser(user);
+                    syncFirebaseData(user.uid);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -2029,6 +2260,7 @@ export default function App() {
             </div>
 
             <AuthSection 
+              defaultIsSignUp={authIsSignUp}
               onAuthSuccess={(user) => {
                 setCurrentUser(user);
                 setAuthModalOpen(false);
@@ -2157,14 +2389,7 @@ export default function App() {
                   <a href="mailto:Support@worldcupstock.space" className="hover:text-[#d4af37] transition-colors font-mono">Support@worldcupstock.space</a>
                 </div>
               </div>
-              <div className="pt-2">
-                <button 
-                  onClick={() => setActiveRoute('admin')}
-                  className="w-full text-center py-2 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 text-[10px] font-bold uppercase rounded transition-colors block cursor-pointer"
-                >
-                  Governance Auditor Control
-                </button>
-              </div>
+
             </div>
 
           </div>
@@ -2178,8 +2403,8 @@ export default function App() {
               <span>Secure Encryption Enabled</span>
             </div>
             
-            <p className="max-w-3xl mx-auto leading-relaxed text-[10px] text-[#4f5664]">
-              Regulatory Disclosure & Escrow: This platform represents a real-time smart contract clearing system. All asset transactions, share allocations, and direct capital positions are logged securely under active network conditions. FIFA logos and associations are properties of their respective owners, used for official index mapping.
+            <p className="max-w-3xl mx-auto leading-relaxed text-xs font-bold text-gray-400">
+              Regulatory Disclosure: FIFA logos and associations are properties of their respective owners, used here for indexing and visualization purposes. This platform represents a secure equity tracking dashboard. All actions are subject to official platform terms of service.
             </p>
 
             <div className="text-[10px] text-gray-700">

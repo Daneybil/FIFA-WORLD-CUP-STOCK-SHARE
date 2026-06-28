@@ -86,69 +86,43 @@ export default function PurchaseModal({
   const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount < 0.1) return;
-    if (!hasSufficientBalance) {
-      setErrorMsg("Insufficient USD collateral value in your investor account balance.");
-      return;
-    }
-
-    // Guest Mode - Bypass Firestore Session and go directly to Step 2
     if (!userId) {
-      setPaymentId('MOCK-GUEST-PAY-' + Math.floor(100000 + Math.random() * 900000));
-      setStep(2);
-      setCountdown(900);
+      setErrorMsg("Please log in or sign up to a secure investor account to purchase shares.");
       return;
     }
 
     setApiLoading(true);
     setErrorMsg(null);
     try {
-      if (selectedMethod === 'CreditCard') {
-        // Create real Stripe checkout session on Express server and redirect
-        const response = await fetch('/api/payments/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            userId,
-            countryId: country.id,
-            countryName: country.name,
-            flag: country.flag,
-            amount,
-            sharesQuantity: sharesCalculated,
-            pricePerShare: country.currentPrice,
-            winningSettlementPrice: country.winningSettlementPrice
-          })
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to create Stripe Checkout session");
-        }
-
-        if (data.url) {
-          window.location.href = data.url;
-          return;
-        } else {
-          throw new Error("Invalid response from checkout session API");
-        }
-      }
-
-      // Create real session in Firestore (Pending state) for Crypto payments
-      const session = await createPaymentSession(userId, {
-        amount,
-        paymentMethod: selectedMethod,
-        countryId: country.id,
-        countryName: country.name,
-        flag: country.flag,
-        sharesQuantity: sharesCalculated,
-        pricePerShare: country.currentPrice,
-        winningSettlementPrice: country.winningSettlementPrice
+      // Create real Stripe checkout session on Express server and redirect
+      const response = await fetch('/api/payments/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId,
+          countryId: country.id,
+          countryName: country.name,
+          flag: country.flag,
+          amount,
+          sharesQuantity: sharesCalculated,
+          pricePerShare: country.currentPrice,
+          winningSettlementPrice: country.winningSettlementPrice
+        })
       });
 
-      setPaymentId(session.id);
-      setStep(2);
-      setCountdown(900); // reset clock
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create Stripe Checkout session");
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      } else {
+        throw new Error("Invalid response from checkout session API");
+      }
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to configure payment gateway.");
     } finally {
@@ -235,21 +209,13 @@ export default function PurchaseModal({
         {step === 1 && (
           <form onSubmit={handleProceedToPayment} className="p-6 space-y-5">
             
-            {/* Real-time price and ledger info cards - 3D styled bevels with gold & emerald green accents */}
-            <div className="grid grid-cols-2 gap-3.5">
+            {/* Real-time price and ledger info cards - 3D styled bevels with gold accent */}
+            <div className="w-full">
               <div className="bg-[#080a11] p-3.5 rounded-xl border border-[#1f273b] shadow-inner relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-[#d4af37]" />
                 <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider block ml-1">Price Per Share</span>
                 <span className="text-base font-extrabold text-white font-mono block mt-1 ml-1">
                   ${country.currentPrice.toFixed(2)}
-                </span>
-              </div>
-              
-              <div className="bg-[#080a11] p-3.5 rounded-xl border border-[#1f273b] shadow-inner relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-[#10b981]" />
-                <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider block ml-1">Available Balance</span>
-                <span className="text-base font-extrabold text-emerald-400 font-mono block mt-1 ml-1">
-                  ${userCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
@@ -346,48 +312,12 @@ export default function PurchaseModal({
               </div>
             </div>
 
-            {/* Select Inbound Provider - 3D Buttons */}
-            <div className="space-y-2.5">
-              <label className="block text-xs font-black uppercase tracking-wider text-gray-400">
-                Select Checkout Inbound Provider
-              </label>
-              <div className="w-full">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('CreditCard')}
-                  className="w-full p-4 rounded-xl border border-[#d4af37] bg-gradient-to-r from-[#d4af37]/15 to-[#d4af37]/5 text-white font-bold shadow-[0_4px_15px_rgba(212,175,55,0.2)] hover:shadow-[0_6px_20px_rgba(212,175,55,0.3)] transition-all cursor-pointer relative overflow-hidden text-left flex items-center justify-between group active:translate-y-0.5"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/30 text-[#d4af37] group-hover:scale-105 transition-transform">
-                      <CreditCard className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs uppercase font-extrabold tracking-widest text-[#d4af37] block font-sans">
-                        Pay Now
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-medium block mt-0.5">
-                        Secure transaction with credit or debit card
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Select status indicator */}
-                  <div className="flex items-center gap-1.5 bg-[#d4af37]/20 border border-[#d4af37]/40 px-2.5 py-1 rounded-md">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
-                    <span className="text-[9px] uppercase tracking-wider text-[#d4af37] font-black font-mono">
-                      Selected
-                    </span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Validation indicators */}
-            {amount > 0 && !hasSufficientBalance && (
-              <div className="bg-red-500/10 border border-red-500/25 px-3.5 py-3 rounded-xl text-xs text-red-400 flex items-start space-x-2.5 shadow-md">
-                <AlertTriangle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-red-500 animate-pulse" />
+            {/* Validation & Auth indicators */}
+            {!userId && (
+              <div className="bg-[#d4af37]/10 border border-[#d4af37]/25 px-3.5 py-3 rounded-xl text-xs text-[#eec765] flex items-start space-x-2.5 shadow-md">
+                <AlertTriangle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-[#d4af37]" />
                 <span>
-                  <strong>Balance Alert:</strong> Your account balance is ${userCash.toFixed(2)}, which is less than your requested checkout of ${amount.toFixed(2)}. Please reduce investment or top up.
+                  <strong>Authentication Required:</strong> Please register or log in to a secure account before initiating Stripe checkout to ensure your shares are securely allocated to your profile.
                 </span>
               </div>
             )}
@@ -404,17 +334,17 @@ export default function PurchaseModal({
             {/* Proceed Action button - Golden, Prominent, 3D extruded look */}
             <button
               type="submit"
-              disabled={amount < 0.1 || !hasSufficientBalance || apiLoading || (userId !== null && !isEmailVerified)}
+              disabled={amount < 0.1 || apiLoading || !userId || (userId !== null && !isEmailVerified)}
               className="w-full py-4 bg-gradient-to-b from-[#f9d976] via-[#d4af37] to-[#8a640f] disabled:opacity-40 disabled:cursor-not-allowed text-black font-black font-sans rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-[0_6px_20px_rgba(212,175,55,0.25)] hover:shadow-[0_8px_25px_rgba(212,175,55,0.45)] hover:brightness-110 active:translate-y-0.5 border-t border-[#ffeb99] border-b-2 border-[#5c4308] flex items-center justify-center gap-2"
             >
               {apiLoading ? (
                 <>
                   <RefreshCw className="w-4.5 h-4.5 animate-spin" />
-                  <span className="font-extrabold">Configuring Escrow Session...</span>
+                  <span className="font-extrabold">Configuring Checkout Session...</span>
                 </>
               ) : (
                 <>
-                  <span className="font-black">Execute Transaction</span>
+                  <span className="font-black">Pay Now with Stripe</span>
                   <ArrowRight className="w-4.5 h-4.5" />
                 </>
               )}
