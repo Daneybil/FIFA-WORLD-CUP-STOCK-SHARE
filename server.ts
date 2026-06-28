@@ -650,4 +650,14 @@ async function setupServer() {
   });
 }
 
-setupServer();
+if (!process.env.VERCEL) {
+  setupServer();
+}
+
+// Export the Express app and Vercel serverless configurations
+export default app;
+export const config = {
+  api: {
+    bodyParser: false, // Disables Vercel's built-in body parser to let Express's parsers handle raw/JSON bodies (essential for Stripe webhook verification)
+  },
+};

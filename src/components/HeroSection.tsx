@@ -57,10 +57,11 @@ export default function HeroSection({
       "login_sub": "Existing User",
       "calc_tab": "World Cup Stock Calculator",
       "calc_sub": "Simulate Returns",
-      "security_title": "Investor Security & Trust Shield",
-      "security_desc": "Enterprise grade collateral backing, audited security clearing nodes, and real-time synchronisation.",
-      "backed_col": "FULLY BACKED COLLATERAL",
-      "audits": "COMPLIANT AUDITS",
+      "security_title": "100% Platform & Account Safety",
+      "security_desc": "All transactions, wallets, and shared assets are protected with end-to-end security and real-time monitoring.",
+      "backed_col": "SAFE DEPOSITS",
+      "backed_val": "100% PROTECTED",
+      "audits": "VERIFIED SYSTEM",
       "secured": "100% SECURED",
       "index_title": "Tournaments & Teams Index:",
       "squads": "⚽ All Squads",
@@ -94,10 +95,11 @@ export default function HeroSection({
       "login_sub": "مستثمر حالي",
       "calc_tab": "حاسبة أسهم كأس العالم",
       "calc_sub": "محاكاة العوائد",
-      "security_title": "درع الأمان والأمان للمستثمرين",
-      "security_desc": "دعم برأس مال مضمون بالكامل، وعقد تدقيق مشفر للسيولة ومزامنة فورية للصفقات.",
-      "backed_col": "سيولة مدعومة بالكامل",
-      "audits": "تدقيق مالي متوافق",
+      "security_title": "أمان وحماية كاملة للمنصة",
+      "security_desc": "جميع المعاملات المالية والمحافظ والأسهم محمية بالكامل بتشفير مصرفي ومراقبة نشطة.",
+      "backed_col": "إيداعات آمنة",
+      "backed_val": "محمي بنسبة ١٠٠٪",
+      "audits": "نظام موثق",
       "secured": "آمن ومحمي ١٠٠٪",
       "index_title": "فهرس البطولة والفرق:",
       "squads": "⚽ جميع المنتخبات",
@@ -131,10 +133,11 @@ export default function HeroSection({
       "login_sub": "Usuario Existente",
       "calc_tab": "Calculadora de Acciones",
       "calc_sub": "Simular Retornos",
-      "security_title": "Escudo de Seguridad y Confianza del Inversor",
-      "security_desc": "Respaldo de garantía de grado empresarial, nodos de compensación de seguridad auditados y sincronización en tiempo real.",
-      "backed_col": "GARANTÍA RESPALDADA AL 100%",
-      "audits": "AUDITORÍAS CUMPLIDAS",
+      "security_title": "Seguridad de Plataforma y Cuenta al 100%",
+      "security_desc": "Todas las transacciones, saldos y acciones están totalmente protegidos con cifrado de grado bancario y seguridad verificada.",
+      "backed_col": "DEPÓSITOS SEGUROS",
+      "backed_val": "100% PROTEGIDO",
+      "audits": "SISTEMA VERIFICADO",
       "secured": "100% SEGURO",
       "index_title": "Índice de Torneos y Equipos:",
       "squads": "⚽ Todos los Equipos",
@@ -168,10 +171,11 @@ export default function HeroSection({
       "login_sub": "Usuário Existente",
       "calc_tab": "Calculadora da Copa",
       "calc_sub": "Simular Retornos",
-      "security_title": "Escudo de Segurança e Confiança do Investidor",
-      "security_desc": "Garantia de nível corporativo, nós de compensação de segurança auditados e sincronização em tempo real.",
-      "backed_col": "GARANTIA TOTALMENTE RESPALDADA",
-      "audits": "AUDITORIAS EM DIA",
+      "security_title": "100% Segurança de Plataforma e Conta",
+      "security_desc": "Todas as transações, saldos e ações estão totalmente protegidos com criptografia de nível bancário e segurança verificada.",
+      "backed_col": "DEPÓSITOS SEGUROS",
+      "backed_val": "100% PROTEGIDO",
+      "audits": "SISTEMA VERIFICADO",
       "secured": "100% SEGURO",
       "index_title": "Índice de Torneios e Seleções:",
       "squads": "⚽ Todas as Seleções",
@@ -205,10 +209,11 @@ export default function HeroSection({
       "login_sub": "Utilisateur Existant",
       "calc_tab": "Calculateur d'Actions",
       "calc_sub": "Simuler les Gains",
-      "security_title": "Bouclier de Sécurité & Confiance des Investisseurs",
-      "security_desc": "Garanties de niveau entreprise, nœuds de compensation sécurisés et audités, synchronisation en temps réel.",
-      "backed_col": "GARANTIE ENTIÈREMENT SÉCURISÉE",
-      "audits": "AUDITS CONFORMES",
+      "security_title": "Sécurité 100% Plateforme & Comptes",
+      "security_desc": "Toutes les transactions, soldes et actions sont entièrement protégés par un cryptage de niveau bancaire et une sécurité vérifiée.",
+      "backed_col": "DÉPÔTS SÉCURISÉS",
+      "backed_val": "100% PROTÉGÉ",
+      "audits": "SYSTÈME VÉRIFIÉ",
       "secured": "100% SÉCURISÉ",
       "index_title": "Index des Équipes:",
       "squads": "⚽ Toutes les Équipes",
@@ -242,10 +247,11 @@ export default function HeroSection({
       "login_sub": "Anleger Login",
       "calc_tab": "WM-Aktienrechner",
       "calc_sub": "Gewinne simulieren",
-      "security_title": "Sicherheit & Anleger-Schutzschild",
-      "security_desc": "Unternehmenstaugliche Liquiditätssicherung, geprüfte Abwicklungsknoten und Echtzeit-Übertragung.",
-      "backed_col": "VOLLSTÄNDIG GECKTE SICHERHEIT",
-      "audits": "REGELKONFORME AUDITS",
+      "security_title": "100% Plattform- & Kontosicherheit",
+      "security_desc": "Alle Transaktionen, Salden und Aktien sind durch erstklassige Verschlüsselung und geprüfte Sicherheitsverfahren geschützt.",
+      "backed_col": "SICHERE EINLAGEN",
+      "backed_val": "100% GESCHÜTZT",
+      "audits": "GEPRÜFTES SYSTEM",
       "secured": "100% GESICHERT",
       "index_title": "Turnier- & Team-Verzeichnis:",
       "squads": "⚽ Alle Mannschaften",
@@ -279,10 +285,11 @@ export default function HeroSection({
       "login_sub": "Investitore Esistente",
       "calc_tab": "Calcolatore Azioni",
       "calc_sub": "Simula Guadagni",
-      "security_title": "Scudo di Sicurezza e Fiducia Inversori",
-      "security_desc": "Supporto collaterale di livello aziendale, nodi di compensazione auditati e sincronizzazione in tempo reale.",
-      "backed_col": "COLLATERALE GARANTITO AL 100%",
-      "audits": "AUDIT CERTIFICATI",
+      "security_title": "Sicurezza al 100% di Piattaforma e Account",
+      "security_desc": "Tutte le transazioni, i saldi e le azioni sono protetti con crittografia di livello bancario e sicurezza verificata.",
+      "backed_col": "DEPOSITI SICURI",
+      "backed_val": "100% PROTETTO",
+      "audits": "SISTEMA VERIFICATO",
       "secured": "100% PROTETTO",
       "index_title": "Indice Tornei e Squadre:",
       "squads": "⚽ Tutte le Squadre",
@@ -316,10 +323,11 @@ export default function HeroSection({
       "login_sub": "既存ユーザー",
       "calc_tab": "ワールドカップ株計算機",
       "calc_sub": "シミュレーター",
-      "security_title": "投資家セキュリティ＆信頼シールド",
-      "security_desc": "エンタープライズ保証、監査済み決済ノード、リアルタイム同期システム。",
-      "backed_col": "完全担保裏付け資金",
-      "audits": "コンプライアンス監査完了",
+      "security_title": "100% 安全なプラットフォーム＆アカウント保護",
+      "security_desc": "すべての取引、残高、保有株式は、銀行レベル of 暗号化と検証済みセキュリティによって安全に保護されています。",
+      "backed_col": "安全な預金管理",
+      "backed_val": "100% 保護済み",
+      "audits": "システム監査完了",
       "secured": "100% 安全保障",
       "index_title": "大会＆チーム別インデックス:",
       "squads": "⚽ すべての代表チーム",
@@ -353,10 +361,11 @@ export default function HeroSection({
       "login_sub": "老客户登录",
       "calc_tab": "世界杯股票收益计算器",
       "calc_sub": "预估投资回报",
-      "security_title": "安全风控与投资者信托防护盾",
-      "security_desc": "企业级全额准备金保障、链上审计清算节点和实时订单轧差对账系统。",
-      "backed_col": "准备金全额支持",
-      "audits": "合规清算审计",
+      "security_title": "100% 平台与账户资金安全保障",
+      "security_desc": "所有交易、余额和持仓股票均受到银行级加密与多重安全防护，确保资金万无一失。",
+      "backed_col": "安全存款保护",
+      "backed_val": "100% 安全保障",
+      "audits": "系统合规审计",
       "secured": "100% 投资安全保障",
       "index_title": "锦标赛与参赛队索引:",
       "squads": "⚽ 查看全部国家队",
@@ -390,10 +399,11 @@ export default function HeroSection({
       "login_sub": "Yatırımcı Girişi",
       "calc_tab": "Dünya Kupası Hesaplayıcı",
       "calc_sub": "Getiriyi Hesapla",
-      "security_title": "Yatırımcı Güvenliği & Güven Kalkanı",
-      "security_desc": "Kurumsal düzeyde teminat desteği, denetlenmiş güvenlik takas düğümleri ve eş zamanlı transfer akışları.",
-      "backed_col": "TAM TEMİNAT GARANTİLİ",
-      "audits": "UYUMLULUK DENETİMLERİ",
+      "security_title": "%100 Güvenli Platform ve Hesap Koruması",
+      "security_desc": "Tüm işlemler, bakiyeler ve hisseler banka düzeyinde şifreleme ve doğrulanmış güvenlik sistemleri ile korunmaktadır.",
+      "backed_col": "GÜVENLİ MEVDUAT",
+      "backed_val": "%100 KORUMALI",
+      "audits": "DOĞRULANMIŞ SİSTEM",
       "secured": "%100 GÜVENLİ",
       "index_title": "Turnuva & Takım Endeksi:",
       "squads": "⚽ Tüm Kadrolar",
@@ -427,10 +437,11 @@ export default function HeroSection({
       "login_sub": "Bestaande Belegger",
       "calc_tab": "WK Aandelenrechner",
       "calc_sub": "Simuleer Rendement",
-      "security_title": "Investor Security & Safe Shield",
-      "security_desc": "Institutionele vermogensdekking, doorlopend gecertificeerde clearing-nodes en realtime synchronisatie.",
-      "backed_col": "100% GEDEKT VERMOGEN",
-      "audits": "GECERTIFICEERDE AUDITS",
+      "security_title": "100% Platform- & Accountbeveiliging",
+      "security_desc": "Alle transacties, saldi en aandelen zijn volledig beveiligd met bankkwaliteit encryptie en geverifieerde veiligheid.",
+      "backed_col": "VEILIGE DEPOSITO'S",
+      "backed_val": "100% BEVEILIGD",
+      "audits": "GEVERIFIEERD SYSTEEM",
       "secured": "100% BEVEILIGD",
       "index_title": "Toernooien & Teams Index:",
       "squads": "⚽ Alle Selecties",
@@ -464,10 +475,11 @@ export default function HeroSection({
       "login_sub": "Для инвесторов",
       "calc_tab": "Калькулятор доходности",
       "calc_sub": "Моделировать прибыль",
-      "security_title": "Щит безопасности инвесторов и траст",
-      "security_desc": "Обеспечение ликвидности институционального уровня, аудит расчетных узлов клиринга и трансляция в реальном времени.",
-      "backed_col": "ОБЕСПЕЧЕНИЕ НА 100%",
-      "audits": "РЕГУЛЯРНЫЕ АУДИТЫ",
+      "security_title": "100% безопасность платформы и аккаунтов",
+      "security_desc": "Все транзакции, балансы и акции полностью защищены сквозным шифрованием банковского уровня и проверенными системами безопасности.",
+      "backed_col": "БЕЗОПАСНЫЕ ДЕПОЗИТЫ",
+      "backed_val": "100% ЗАЩИЩЕНО",
+      "audits": "ПРОВЕРЕННАЯ СИСТЕМА",
       "secured": "100% ЗАЩИЩЕНО",
       "index_title": "Каталог турниров и сборных:",
       "squads": "⚽ Все сборные",
@@ -501,10 +513,11 @@ export default function HeroSection({
       "login_sub": "기존 주주 로그인",
       "calc_tab": "월드컵 주식 계산기",
       "calc_sub": "시뮬레이션 도구",
-      "security_title": "투자자 자산 보안 및 신뢰 보호막",
-      "security_desc": "기업 및 글로벌 등급의 전액 담보 제공 보증금, 감사 완료된 실시간 거래소 체결 청산 노드 가동.",
-      "backed_col": "100% 예치금 지급 준비 완료",
-      "audits": "정기 청산 안정성 감사 완료",
+      "security_title": "100% 플랫폼 및 자산 계정 안전 보장",
+      "security_desc": "모든 거래 내역, 예치금 잔액, 보유 주식은 은행 수준의 최고급 암호화 기술과 검증된 보안 체계로 철저히 보호됩니다.",
+      "backed_col": "안전 예치 보호",
+      "backed_val": "100% 안전 보장",
+      "audits": "보안성 감사 완료",
       "secured": "100% 자산 보호 처리됨",
       "index_title": "锦标赛 및 대표팀 인덱스:",
       "squads": "⚽ 전체 국가대표팀 스쿼드",
@@ -515,6 +528,25 @@ export default function HeroSection({
   const tLocal = (key: string) => {
     const langDict = translations[activeLanguage] || translations['English'];
     return langDict[key] || translations['English'][key] || key;
+  };
+
+  const splitMainTitle = (lang: string, fullTitle: string): [string, string] => {
+    const splits: Record<string, [string, string]> = {
+      "English": ["Own Shares In Your", "Favorite World Cup Team"],
+      "العربية (Arabic)": ["امتلك أسهماً في", "فريقك المفضل بكأس العالم"],
+      "Español (Spanish)": ["Sea dueño de acciones de su", "equipo favorito de la Copa Mundial"],
+      "Português (Portuguese)": ["Seja Dono de Ações da Sua", "Seleção Favorita da Copa do Mundo"],
+      "Français (French)": ["Possédez des Actions de Votre", "Équipe Préférée de la Coupe du Monde"],
+      "Deutsch (German)": ["Besitzen Sie Aktien", "Ihres Lieblings-WM-Teams"],
+      "Italiano (Italian)": ["Possiedi Azioni della Tua", "Squadra del Cuore dei Mondiali"],
+      "日本語 (Japanese)": ["お気に入りの", "ワールドカップチームの株式を所有しよう"],
+      "中文 (Chinese)": ["购买并拥有您心仪的", "世界杯国家队股票"],
+      "Türkçe (Turkish)": ["Favori", "Dünya Kupası Takımınızın Hisselerine Sahip Olun"],
+      "Nederlands (Dutch)": ["Bezit Aandelen in Jouw", "Favoriete WK-Team"],
+      "Русский (Russian)": ["Владейте акциями своей", "любимой сборной ЧМ"],
+      "한국어 (Korean)": ["당신이 사랑하는", "월드컵 국가대표팀의 주주가 되십시오"]
+    };
+    return splits[lang] || [fullTitle, ""];
   };
 
   const isRTL = activeLanguage === 'العربية (Arabic)';
@@ -534,7 +566,14 @@ export default function HeroSection({
 
         {/* Dynamic Display Typography Headings */}
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white font-display uppercase tracking-tight leading-[0.95] mb-4.5 max-w-5xl mx-auto drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-          {tLocal('main_title')}
+          {(() => {
+            const [p1, p2] = splitMainTitle(activeLanguage, tLocal('main_title'));
+            return (
+              <>
+                {p1} <span className="text-[#ffd053] block sm:inline">{p2}</span>
+              </>
+            );
+          })()}
         </h1>
 
         <p className="text-sm sm:text-lg md:text-xl font-bold text-gray-300 tracking-wide max-w-3xl mx-auto mb-9 font-sans drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
@@ -544,7 +583,7 @@ export default function HeroSection({
         {/* Glowing Perfect Opportunity Millionaire Container */}
         <div className="w-full max-w-4xl mx-auto mb-11 p-[1.5px] rounded-2xl bg-gradient-to-r from-[#ffd700]/40 via-[#222c42]/80 to-[#ffd700]/40 shadow-[0_10px_40px_rgba(212,175,55,0.15)] select-none">
           <div className="bg-gradient-to-b from-[#111726]/98 to-[#0b0e17]/98 rounded-[15px] p-6 sm:p-8 text-center border border-white/5">
-            <h3 className="text-sm sm:text-base font-black text-[#ffd053] font-display uppercase tracking-wider mb-2.5">
+            <h3 className="text-sm sm:text-base font-black text-[#ffd053] font-display uppercase tracking-wider mb-2.5 drop-shadow-[0_2px_8px_rgba(255,208,83,0.4)]">
               {tLocal('millionaire_title')}
             </h3>
             <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-sans max-w-3xl mx-auto">
@@ -801,7 +840,7 @@ export default function HeroSection({
             <div className="flex gap-2 sm:gap-4 shrink-0 w-full md:w-auto">
               <div className="p-3 bg-neutral-900/60 border-2 border-[#d4af37]/50 rounded-xl flex-1 md:flex-initial text-center md:text-left shadow-[0_0_15px_rgba(212,175,55,0.1)]">
                 <span className="block text-[9px] uppercase tracking-widest text-[#d4af37] font-extrabold font-mono">{tLocal('backed_col')}</span>
-                <span className="block text-sm sm:text-base font-black text-white font-mono mt-0.5">$1,000,000,000+ USD</span>
+                <span className="block text-sm sm:text-base font-black text-white font-mono mt-0.5">{tLocal('backed_val')}</span>
               </div>
               <div className="p-3 bg-neutral-900/60 border border-[#20293d] rounded-xl flex-1 md:flex-initial text-center md:text-left">
                 <span className="block text-[9px] uppercase tracking-widest text-emerald-400 font-extrabold font-mono font-sans">{tLocal('audits')}</span>

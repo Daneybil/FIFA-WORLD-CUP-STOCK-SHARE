@@ -112,6 +112,13 @@ export default function PurchaseModal({
         })
       });
 
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const responseText = await response.text();
+        console.error("[Server Error] Received non-JSON response:", responseText);
+        throw new Error("The backend server is either offline, not configured to run on your custom host, or returned an HTML error. Please verify that your Node.js backend server is running and routing API requests correctly.");
+      }
+
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to create Stripe Checkout session");

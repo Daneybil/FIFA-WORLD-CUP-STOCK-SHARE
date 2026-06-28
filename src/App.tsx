@@ -464,45 +464,119 @@ export default function App() {
   }, [detectedLanguage]);
 
   useEffect(() => {
-    // If a language has already been selected by the user, do not override
-    if (localStorage.getItem('world_cup_shares_detected_lang')) {
-      return;
-    }
-    try {
-      const browserLang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
-      const langLower = browserLang.toLowerCase();
-      
-      // Smart timezone checking to detect regions like Egypt or Middle East
-      const tz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone || "" : "";
-      const isArabicRegion = tz.includes("Cairo") || tz.includes("Egypt") || tz.includes("Riyadh") || tz.includes("Dubai") || tz.includes("Baghdad") || tz.includes("Khartoum") || tz.includes("Amman") || tz.includes("Beirut") || tz.includes("Damascus") || tz.includes("Kuwait") || tz.includes("Muscat") || tz.includes("Doha") || tz.includes("Manama") || tz.includes("Tunis") || tz.includes("Algiers") || tz.includes("Rabat") || tz.includes("Tripoli") || tz.includes("Sanaa");
+    // Attempt IP-based country detection for automatic regional translation
+    const detectRegionAndLanguage = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout for fast loading
+        
+        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) throw new Error("API status error");
+        const data = await res.json();
+        const countryCode = (data.country_code || "").toUpperCase();
+        
+        let targetLang = 'English';
+        
+        const chineseCountries = ['CN', 'HK', 'TW', 'MO', 'SG'];
+        const spanishCountries = ['ES', 'MX', 'AR', 'CO', 'CL', 'PE', 'VE', 'EC', 'GT', 'BO', 'PR', 'PY', 'UY', 'SV', 'CR', 'PA', 'HN', 'NI', 'CU', 'DO', 'GQ'];
+        const portugueseCountries = ['BR', 'PT', 'AO', 'MZ', 'CV', 'GW', 'TL', 'ST'];
+        const frenchCountries = ['FR', 'CA', 'BE', 'CH', 'LU', 'MC', 'SN', 'CI', 'CD', 'MG', 'CM', 'CG'];
+        const germanCountries = ['DE', 'AT', 'CH', 'LI', 'LU'];
+        const italianCountries = ['IT', 'CH', 'SM', 'VA'];
+        const japaneseCountries = ['JP'];
+        const koreanCountries = ['KR', 'KP'];
+        const turkishCountries = ['TR', 'CY'];
+        const dutchCountries = ['NL', 'BE', 'SR'];
+        const russianCountries = ['RU', 'BY', 'KZ', 'KG', 'UA', 'UZ', 'TM', 'TJ', 'MD', 'AM', 'GE', 'AZ'];
+        const arabicCountries = ['SA', 'AE', 'EG', 'JO', 'LB', 'QA', 'KW', 'OM', 'BH', 'YE', 'IQ', 'SY', 'LY', 'SD', 'SO', 'DJ', 'MR', 'DZ', 'MA', 'TN'];
 
-      let matchedLang = 'English';
-      if (langLower.startsWith('ar') || isArabicRegion) {
-        matchedLang = 'العربية (Arabic)';
-      } else if (langLower.startsWith('es')) {
-        matchedLang = 'Español (Spanish)';
-      } else if (langLower.startsWith('pt')) {
-        matchedLang = 'Português (Portuguese)';
-      } else if (langLower.startsWith('fr')) {
-        matchedLang = 'Français (French)';
-      } else if (langLower.startsWith('de')) {
-        matchedLang = 'Deutsch (German)';
-      } else if (langLower.startsWith('it')) {
-        matchedLang = 'Italiano (Italian)';
-      } else if (langLower.startsWith('ja')) {
-        matchedLang = '日本語 (Japanese)';
-      } else if (langLower.startsWith('zh')) {
-        matchedLang = '中文 (Chinese)';
-      } else if (langLower.startsWith('ko')) {
-        matchedLang = '한국어 (Korean)';
+        if (chineseCountries.includes(countryCode)) {
+          targetLang = '中文 (Chinese)';
+        } else if (spanishCountries.includes(countryCode)) {
+          targetLang = 'Español (Spanish)';
+        } else if (portugueseCountries.includes(countryCode)) {
+          targetLang = 'Português (Portuguese)';
+        } else if (frenchCountries.includes(countryCode)) {
+          targetLang = 'Français (French)';
+        } else if (germanCountries.includes(countryCode)) {
+          targetLang = 'Deutsch (German)';
+        } else if (italianCountries.includes(countryCode)) {
+          targetLang = 'Italiano (Italian)';
+        } else if (japaneseCountries.includes(countryCode)) {
+          targetLang = '日本語 (Japanese)';
+        } else if (koreanCountries.includes(countryCode)) {
+          targetLang = '한국어 (Korean)';
+        } else if (turkishCountries.includes(countryCode)) {
+          targetLang = 'Türkçe (Turkish)';
+        } else if (dutchCountries.includes(countryCode)) {
+          targetLang = 'Nederlands (Dutch)';
+        } else if (russianCountries.includes(countryCode)) {
+          targetLang = 'Русский (Russian)';
+        } else if (arabicCountries.includes(countryCode)) {
+          targetLang = 'العربية (Arabic)';
+        } else {
+          // Fallback to browser locale
+          const browserLang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
+          const langLower = browserLang.toLowerCase();
+          if (langLower.startsWith('zh')) targetLang = '中文 (Chinese)';
+          else if (langLower.startsWith('es')) targetLang = 'Español (Spanish)';
+          else if (langLower.startsWith('pt')) targetLang = 'Português (Portuguese)';
+          else if (langLower.startsWith('fr')) targetLang = 'Français (French)';
+          else if (langLower.startsWith('de')) targetLang = 'Deutsch (German)';
+          else if (langLower.startsWith('it')) targetLang = 'Italiano (Italian)';
+          else if (langLower.startsWith('ja')) targetLang = '日本語 (Japanese)';
+          else if (langLower.startsWith('ko')) targetLang = '한국어 (Korean)';
+          else if (langLower.startsWith('tr')) targetLang = 'Türkçe (Turkish)';
+          else if (langLower.startsWith('nl')) targetLang = 'Nederlands (Dutch)';
+          else if (langLower.startsWith('ru')) targetLang = 'Русский (Russian)';
+          else if (langLower.startsWith('ar')) targetLang = 'العربية (Arabic)';
+        }
+
+        setDetectedLanguage(targetLang);
+        localStorage.setItem('world_cup_shares_detected_lang', targetLang);
+      } catch (err) {
+        console.warn("Geolocation detection failed, using browser locale fallback:", err);
+        // Fallback to browser language detector
+        const browserLang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
+        const langLower = browserLang.toLowerCase();
+        
+        const tz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone || "" : "";
+        const isArabicRegion = tz.includes("Cairo") || tz.includes("Egypt") || tz.includes("Riyadh") || tz.includes("Dubai") || tz.includes("Baghdad") || tz.includes("Khartoum") || tz.includes("Amman") || tz.includes("Beirut") || tz.includes("Damascus") || tz.includes("Kuwait") || tz.includes("Muscat") || tz.includes("Doha") || tz.includes("Manama") || tz.includes("Tunis") || tz.includes("Algiers") || tz.includes("Rabat") || tz.includes("Tripoli") || tz.includes("Sanaa");
+
+        let targetLang = 'English';
+        if (langLower.startsWith('ar') || isArabicRegion) {
+          targetLang = 'العربية (Arabic)';
+        } else if (langLower.startsWith('es')) {
+          targetLang = 'Español (Spanish)';
+        } else if (langLower.startsWith('pt')) {
+          targetLang = 'Português (Portuguese)';
+        } else if (langLower.startsWith('fr')) {
+          targetLang = 'Français (French)';
+        } else if (langLower.startsWith('de')) {
+          targetLang = 'Deutsch (German)';
+        } else if (langLower.startsWith('it')) {
+          targetLang = 'Italiano (Italian)';
+        } else if (langLower.startsWith('ja')) {
+          targetLang = '日本語 (Japanese)';
+        } else if (langLower.startsWith('zh')) {
+          targetLang = '中文 (Chinese)';
+        } else if (langLower.startsWith('ko')) {
+          targetLang = '한국어 (Korean)';
+        } else if (langLower.startsWith('tr')) {
+          targetLang = 'Türkçe (Turkish)';
+        } else if (langLower.startsWith('nl')) {
+          targetLang = 'Nederlands (Dutch)';
+        } else if (langLower.startsWith('ru')) {
+          targetLang = 'Русский (Russian)';
+        }
+        setDetectedLanguage(targetLang);
+        localStorage.setItem('world_cup_shares_detected_lang', targetLang);
       }
-      setDetectedLanguage(matchedLang);
-      if (matchedLang !== 'English') {
-        setDetectionNoticeOpen(true);
-      }
-    } catch (e) {
-      console.warn("Language detection bypassed: ", e);
-    }
+    };
+
+    detectRegionAndLanguage();
   }, []);
 
   // Football-Data.org server Proxy Loader & Sync Engine
@@ -1356,8 +1430,13 @@ export default function App() {
         <div className="absolute inset-0 bg-transparent pointer-events-none" />
       </div>
 
-      {/* GLOBAL COUNTDOWN TOP BANNER - Professionally placed at the absolute top of the website */}
-      <div className="bg-gradient-to-r from-red-600/25 via-[#d4af37]/30 to-red-600/25 border-b border-[#d4af37]/35 py-2.5 text-center relative z-40 shadow-[0_4px_25px_rgba(212,175,55,0.18)] animate-pulse select-none">
+      {/* Dynamic scrolling horizontal market quotes ticker - Professionally placed at the absolute top */}
+      <div className="relative z-40">
+        <MarketTicker countries={countries} />
+      </div>
+
+      {/* GLOBAL COUNTDOWN TOP BANNER - Positioned below the Live Ticket */}
+      <div className="bg-gradient-to-r from-red-600/25 via-[#d4af37]/30 to-red-600/25 border-b border-[#d4af37]/35 py-2.5 text-center relative z-10 shadow-[0_4px_25px_rgba(212,175,55,0.18)] animate-pulse select-none">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 font-sans">
           <span className="text-[10px] sm:text-xs font-black tracking-widest text-[#d4af37] font-mono uppercase flex items-center gap-1.5">
             🏆 {tCountdown('title')}
@@ -1384,11 +1463,6 @@ export default function App() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Dynamic scrolling horizontal market quotes ticker */}
-      <div className="relative z-10">
-        <MarketTicker countries={countries} />
       </div>
 
       {/* Main Luxury Header Navigation Bar - styled transparent to fit the top-top background image */}
@@ -2396,19 +2470,15 @@ export default function App() {
 
           <div className="pt-8 text-center space-y-4">
             <div className="flex justify-center space-x-6 items-center flex-wrap text-[#8b98b0] text-[10px]">
-              <span className="font-black text-[#d4af37]">FIFA STOCKS EXCHANGE</span>
+              <span className="font-black text-[#d4af37]">WORLD CUP STOCK SHARES EXCHANGE</span>
               <span>•</span>
               <span>Secure Custodial Escrow</span>
               <span>•</span>
               <span>Secure Encryption Enabled</span>
             </div>
-            
-            <p className="max-w-3xl mx-auto leading-relaxed text-xs font-bold text-gray-400">
-              Regulatory Disclosure: FIFA logos and associations are properties of their respective owners, used here for indexing and visualization purposes. This platform represents a secure equity tracking dashboard. All actions are subject to official platform terms of service.
-            </p>
 
             <div className="text-[10px] text-gray-700">
-              © 2026 FIFA World Cup Stock Shares Platform. All share allocations are active and audited under international guidelines.
+              © 2026 World Cup Stock Shares Platform. All share allocations are active and audited under international guidelines.
             </div>
           </div>
 
