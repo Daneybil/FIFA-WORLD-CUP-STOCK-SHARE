@@ -587,10 +587,12 @@ export default function App() {
       console.log("Fetching live Football-Data.org API endpoints...");
       const start = Date.now();
       
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://fifa-world-cup-stock-share-production.up.railway.app";
+      
       const [teamsRes, standingsRes, matchesRes] = await Promise.all([
-        fetch('/api/football/teams'),
-        fetch('/api/football/standings'),
-        fetch('/api/football/matches')
+        fetch(`${backendUrl}/api/football/teams`),
+        fetch(`${backendUrl}/api/football/standings`),
+        fetch(`${backendUrl}/api/football/matches`)
       ]);
 
       if (!teamsRes.ok || !standingsRes.ok || !matchesRes.ok) {
