@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import path from "path";
 import dns from "dns";
 import dotenv from "dotenv";
@@ -17,6 +18,7 @@ dns.setDefaultResultOrder("ipv4first");
 dotenv.config();
 
 const app = express();
+app.use(cors());
 const PORT = 3000;
 
 // The Football-Data.org API Token (Server-only secret, never exposed to user browser)
