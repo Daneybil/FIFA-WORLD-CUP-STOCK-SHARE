@@ -7,9 +7,7 @@ import Stripe from "stripe";
 import admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import fs from "fs";
-const firebaseConfig = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8")
-);
+import firebaseConfig from "./firebase-applet-config.json" with { type: "json" };
 
 // Set DNS order to prefer IPv4 for consistent local and container networking
 dns.setDefaultResultOrder("ipv4first");
