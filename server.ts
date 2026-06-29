@@ -19,7 +19,7 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // The Football-Data.org API Token (Server-only secret, never exposed to user browser)
 const API_TOKEN = process.env.FOOTBALL_DATA_API_TOKEN || "81091c3dff0e4554919567ed8c2fe40c";
