@@ -1,6 +1,11 @@
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
-import firebaseConfig from "./firebase-applet-config.json" with { type: "json" };
+import fs from "fs";
+import path from "path";
+
+const firebaseConfig = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8")
+);
 
 async function testInit() {
   console.log("Testing Firebase Admin SDK and Firestore initialization...");
