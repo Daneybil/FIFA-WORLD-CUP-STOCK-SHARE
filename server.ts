@@ -7,6 +7,7 @@ import Stripe from "stripe";
 import admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import fs from "fs";
+import firebaseConfig from "./firebase-applet-config.json";
 
 // Set DNS order to prefer IPv4 for consistent local and container networking
 dns.setDefaultResultOrder("ipv4first");
@@ -120,9 +121,7 @@ app.get("/api/football/matches", async (req, res) => {
 
 // ========================================== STRIPE & FIREBASE SECURE LEDGER INTEGRATION
 
-// Load Firebase applet configuration safely
-const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+// Load Firebase applet configuration safely via static import above
 
 // Initialize Firebase Admin SDK
 try {
