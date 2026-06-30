@@ -31,16 +31,32 @@ interface TournamentCenterProps {
   apiLoading?: boolean;
   apiError?: string | null;
   onManualTriggerSync?: () => void;
+  rawTeamsData?: any;
+  rawStandingsData?: any;
+  rawMatchesData?: any;
 }
 
 export default function TournamentCenter({ 
   fixtures = [], 
   countries = [],
-  initialTab = 'overview'
+  initialTab = 'overview',
+  lastSyncTime = null,
+  lastResponseTime = null,
+  numTeamsLoaded = 0,
+  numFixturesLoaded = 0,
+  numStandingsLoaded = 0,
+  apiSuccessCount = 1,
+  apiFailedCount = 0,
+  apiLoading = false,
+  apiError = null,
+  onManualTriggerSync,
+  rawTeamsData,
+  rawStandingsData,
+  rawMatchesData
 }: TournamentCenterProps) {
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'fixtures' | 'standings'>(() => {
-    if (initialTab === 'fixtures') return 'fixtures';
+  const [activeTab, setActiveTab] = useState<'overview' | 'fixtures' | 'standings' | 'live'>(() => {
+    if (initialTab === 'fixtures') return 'live';
     if (initialTab === 'groups') return 'standings';
     return 'overview';
   });
@@ -57,7 +73,7 @@ export default function TournamentCenter({
   // Sync activeTab if initialTab changes
   useEffect(() => {
     if (initialTab === 'fixtures') {
-      setActiveTab('fixtures');
+      setActiveTab('live');
     } else if (initialTab === 'groups') {
       setActiveTab('standings');
     } else {
@@ -86,7 +102,7 @@ export default function TournamentCenter({
               <span>Official World Cup Portfolio Hub</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-black font-display text-white tracking-tight leading-none">
-              {activeTab === 'overview' ? 'Tournament Roadmap & Overview' : activeTab === 'fixtures' ? 'Smarter Prediction & Research Center' : 'Group Standings & Valuations'}
+              {activeTab === 'live' ? 'Live Football Centre' : activeTab === 'overview' ? 'Tournament Roadmap & Overview' : activeTab === 'fixtures' ? 'Smarter Prediction & Research Center' : 'Group Standings & Valuations'}
             </h2>
             <p className="text-sm text-gray-300 max-w-3xl leading-relaxed font-medium">
               Formulate your prediction strategy, analyze competing countries, and track structural progression as squads advance toward the final. Real-time value changes reflect market sentiment and performance index mapping.
@@ -96,6 +112,20 @@ export default function TournamentCenter({
 
         {/* Tab Selection */}
         <div className="flex border-b border-[#212739] gap-1 overflow-x-auto pb-px">
+          <button
+            onClick={() => setActiveTab('live')}
+            className={`px-6 py-3.5 font-extrabold text-xs tracking-wider uppercase transition-all flex items-center space-x-2.5 border-b-2 whitespace-nowrap cursor-pointer ${
+              activeTab === 'live'
+                ? 'border-[#d4af37] text-white bg-[#141924]/50'
+                : 'border-transparent text-gray-400 hover:text-white hover:bg-[#141924]/20'
+            }`}
+          >
+            <span className="relative flex h-2 w-2 mr-1">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            </span>
+            <span className="font-bold text-red-400">Live Football Centre</span>
+          </button>
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-6 py-3.5 font-extrabold text-xs tracking-wider uppercase transition-all flex items-center space-x-2.5 border-b-2 whitespace-nowrap cursor-pointer ${
@@ -130,6 +160,27 @@ export default function TournamentCenter({
             <span className="font-bold">Group Standings</span>
           </button>
         </div>
+
+        {/* tab 0: Live Football Centre */}
+        {activeTab === 'live' && (
+          <div className="space-y-8 animate-fadeIn">
+
+            {apiError && (
+              <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl text-red-400 text-xs font-bold uppercase tracking-wider flex items-center space-x-3">
+                <span>⚠️ Error Syncing with Football-Data.org server: {apiError}</span>
+              </div>
+            )}
+
+            {/* Live Matches & Scores Widget */}
+            <LiveFootballCenterWidget 
+              rawMatchesData={rawMatchesData}
+              rawStandingsData={rawStandingsData}
+              countries={countries}
+              apiLoading={apiLoading}
+            />
+
+          </div>
+        )}
 
         {/* tab 1: Tournament Overview and Roadmap */}
         {activeTab === 'overview' && (
@@ -500,6 +551,390 @@ export default function TournamentCenter({
           </div>
         )}
 
+      </div>
+    </div>
+  );
+}
+
+// Define interface for widget
+interface LiveFootballCenterWidgetProps {
+  rawMatchesData: any;
+  rawStandingsData: any;
+  countries: CountryShare[];
+  apiLoading: boolean;
+}
+
+export function LiveFootballCenterWidget({
+  rawMatchesData,
+  rawStandingsData,
+  countries,
+  apiLoading
+}: LiveFootballCenterWidgetProps) {
+  const [matchFilter, setMatchFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
+
+  const matches = rawMatchesData?.matches || [];
+  
+  // Safe helper to get a flag emoji fallback
+  const getFlagFallback = (tla: string) => {
+    const map: Record<string, string> = {
+      SEN: '🇸🇳', NED: '🇳🇱', ENG: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', IRN: '🇮🇷', USA: '🇺🇸', WAL: '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+      ARG: '🇦🇷', KSA: '🇸🇦', MEX: '🇲🇽', POL: '🇵🇱', FRA: '🇫🇷', AUS: '🇦🇺',
+      DEN: '🇩🇰', TUN: '🇹🇳', ESP: '🇪🇸', CRC: '🇨🇷', GER: '🇩🇪', JPN: '🇯🇵',
+      BEL: '🇧🇪', CAN: '🇨🇦', MAR: '🇲🇦', CRO: '🇭🇷', BRA: '🇧🇷', SRB: '🇷🇸',
+      SUI: '🇨🇭', CMR: '🇨🇲', POR: '🇵🇹', GHA: '🇬🇭', URU: '🇺🇾', KOR: '🇰🇷'
+    };
+    return map[tla?.toUpperCase()] || '🏳️';
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case 'LIVE':
+      case 'IN_PLAY':
+        return 'LIVE';
+      case 'PAUSED':
+        return 'HALF-TIME';
+      case 'FINISHED':
+        return 'FINISHED';
+      case 'SCHEDULED':
+      case 'TIMED':
+        return 'SCHEDULED';
+      default:
+        return status || 'SCHEDULED';
+    }
+  };
+
+  const filteredMatches = matches.filter((m: any) => {
+    const status = m.status?.toUpperCase();
+    if (matchFilter === 'live') {
+      return status === 'LIVE' || status === 'IN_PLAY' || status === 'PAUSED';
+    }
+    if (matchFilter === 'upcoming') {
+      return status === 'SCHEDULED' || status === 'TIMED';
+    }
+    if (matchFilter === 'finished') {
+      return status === 'FINISHED' || status === 'AWARDED';
+    }
+    return true; // 'all'
+  });
+
+  // Calculate some metadata statistics
+  const liveCount = matches.filter((m: any) => ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status?.toUpperCase())).length;
+  const upcomingCount = matches.filter((m: any) => ['SCHEDULED', 'TIMED'].includes(m.status?.toUpperCase())).length;
+  const finishedCount = matches.filter((m: any) => ['FINISHED', 'AWARDED'].includes(m.status?.toUpperCase())).length;
+
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  };
+
+  // Standings resolver
+  const standings = rawStandingsData?.standings || [];
+
+  return (
+    <div className="space-y-8">
+
+      {/* Filter and Overview tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-wrap gap-1.5 bg-[#121622] p-1.5 rounded-xl border border-[#232b3e]">
+          {[
+            { key: 'all', label: `All Matches (${matches.length})` },
+            { key: 'live', label: `Live Score (${liveCount})`, isLive: true },
+            { key: 'upcoming', label: `Upcoming (${upcomingCount})` },
+            { key: 'finished', label: `Completed Results (${finishedCount})` }
+          ].map((btn) => (
+            <button
+              key={btn.key}
+              onClick={() => setMatchFilter(btn.key as any)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center space-x-1.5 ${
+                matchFilter === btn.key
+                  ? 'bg-[#1e2538] text-white border border-[#303c5a]'
+                  : 'text-gray-400 hover:text-white hover:bg-[#1a2135]/50 border border-transparent'
+              }`}
+            >
+              {btn.isLive && (
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
+              )}
+              <span>{btn.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="text-right">
+          <span className="text-[10px] font-mono text-gray-400 font-bold block uppercase tracking-widest">Competition Overview</span>
+          <span className="text-sm font-black text-white block uppercase tracking-wider mt-0.5">
+            {rawMatchesData?.competition?.name || "FIFA World Cup"} ⏤ {rawMatchesData?.competition?.area?.name || "International"}
+          </span>
+        </div>
+      </div>
+
+      {/* MATCHES DISPLAY BOARD */}
+      {apiLoading && matches.length === 0 ? (
+        <div className="bg-[#11141e] border border-[#212739] py-16 text-center rounded-2xl space-y-3.5">
+          <div className="inline-block animate-spin text-3xl">⚽</div>
+          <p className="text-sm text-gray-400 font-bold uppercase tracking-wider">Synchronising Live Football-Data from server...</p>
+        </div>
+      ) : filteredMatches.length === 0 ? (
+        <div className="bg-[#11141e] border border-[#212739] py-16 text-center rounded-2xl space-y-3">
+          <div className="text-4xl">🏟️</div>
+          <h4 className="text-sm font-black text-white uppercase tracking-wider">No Matches Found</h4>
+          <p className="text-xs text-gray-400 font-bold max-w-md mx-auto leading-relaxed">
+            There are no match fixtures matching your selection in the live pool. Try shifting filters or trigger a fresh data sync.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
+          {filteredMatches.map((m: any) => {
+            const isLive = ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status?.toUpperCase());
+            const statusText = getStatusText(m.status);
+            
+            return (
+              <div 
+                key={m.id} 
+                className={`bg-gradient-to-br from-[#121622] to-[#11141e] border rounded-2xl overflow-hidden shadow-lg transition-all hover:scale-[1.01] hover:shadow-2xl flex flex-col justify-between ${
+                  isLive ? 'border-red-500/20 shadow-red-500/5' : 'border-[#1e2332]'
+                }`}
+              >
+                {/* Header of the Match Card */}
+                <div className="bg-[#181e30]/60 px-5 py-3 border-b border-[#212739]/80 flex justify-between items-center text-[11px] font-mono text-gray-400 font-bold uppercase tracking-wider">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-md font-bold text-[10px]">
+                      {m.stage ? m.stage.replace('_', ' ') : 'STAGE'}
+                    </span>
+                    {m.group && (
+                      <span className="bg-gray-800 text-gray-300 px-2 py-0.5 rounded-md font-bold text-[10px]">
+                        {m.group.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center space-x-1.5">
+                    {isLive && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                    )}
+                    <span className={`font-bold px-2 py-0.5 rounded-md ${
+                      isLive ? 'bg-red-500/10 text-red-400' : m.status === 'FINISHED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-800 text-gray-400'
+                    }`}>
+                      {statusText}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Score / Teams Body */}
+                <div className="p-6 space-y-6">
+                  <div className="grid grid-cols-3 items-center">
+                    
+                    {/* Home Team */}
+                    <div className="text-center space-y-2">
+                      <div className="h-14 w-14 mx-auto bg-black/30 rounded-full border border-white/5 flex items-center justify-center p-2.5 overflow-hidden">
+                        {m.homeTeam?.crest ? (
+                          <img 
+                            src={m.homeTeam.crest} 
+                            alt={m.homeTeam.name} 
+                            className="max-h-full max-w-full object-contain" 
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              // Replace broken logo with emoji fallback
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              const parent = (e.target as HTMLElement).parentElement;
+                              if (parent) {
+                                const span = document.createElement('span');
+                                span.className = 'text-2xl';
+                                span.innerText = getFlagFallback(m.homeTeam?.tla || '');
+                                parent.appendChild(span);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span className="text-2xl">{getFlagFallback(m.homeTeam?.tla || '')}</span>
+                        )}
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-sm font-black text-white block uppercase tracking-wide truncate max-w-[120px] mx-auto font-bold">
+                          {m.homeTeam?.shortName || m.homeTeam?.name || "Home Team"}
+                        </span>
+                        <span className="text-[10px] font-mono text-gray-500 block font-bold uppercase">{m.homeTeam?.tla || 'TBD'}</span>
+                      </div>
+                    </div>
+
+                    {/* Score Area */}
+                    <div className="text-center">
+                      {m.status === 'FINISHED' || isLive ? (
+                        <div className="space-y-1">
+                          <div className="flex justify-center items-center space-x-3">
+                            <span className="text-3xl font-black font-mono text-white tracking-tighter">
+                              {m.score?.fullTime?.home ?? 0}
+                            </span>
+                            <span className="text-gray-500 font-bold">-</span>
+                            <span className="text-3xl font-black font-mono text-white tracking-tighter">
+                              {m.score?.fullTime?.away ?? 0}
+                            </span>
+                          </div>
+                          {m.score?.halfTime?.home !== null && m.score?.halfTime?.away !== null && (
+                            <span className="text-[10px] font-mono text-gray-500 uppercase font-black block">
+                              HT: {m.score.halfTime.home} - {m.score.halfTime.away}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1 bg-black/15 p-2 rounded-xl border border-white/5">
+                          <span className="text-xs font-mono font-black text-amber-400 uppercase tracking-widest block">
+                            {formatTime(m.utcDate)}
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wide">
+                            {formatDate(m.utcDate)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Away Team */}
+                    <div className="text-center space-y-2">
+                      <div className="h-14 w-14 mx-auto bg-black/30 rounded-full border border-white/5 flex items-center justify-center p-2.5 overflow-hidden">
+                        {m.awayTeam?.crest ? (
+                          <img 
+                            src={m.awayTeam.crest} 
+                            alt={m.awayTeam.name} 
+                            className="max-h-full max-w-full object-contain" 
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              // Replace broken logo with emoji fallback
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              const parent = (e.target as HTMLElement).parentElement;
+                              if (parent) {
+                                const span = document.createElement('span');
+                                span.className = 'text-2xl';
+                                span.innerText = getFlagFallback(m.awayTeam?.tla || '');
+                                parent.appendChild(span);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span className="text-2xl">{getFlagFallback(m.awayTeam?.tla || '')}</span>
+                        )}
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-sm font-black text-white block uppercase tracking-wide truncate max-w-[120px] mx-auto font-bold">
+                          {m.awayTeam?.shortName || m.awayTeam?.name || "Away Team"}
+                        </span>
+                        <span className="text-[10px] font-mono text-gray-500 block font-bold uppercase">{m.awayTeam?.tla || 'TBD'}</span>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Footer of the Match Card with details */}
+                <div className="bg-[#111522]/40 px-5 py-3.5 border-t border-[#1e2332]/50 flex justify-between items-center text-[10px] text-gray-400 font-bold font-mono">
+                  <span className="truncate max-w-[180px]">🏟️ {m.venue || 'Official Stadium'}</span>
+                  <span>
+                    {m.referees && m.referees.length > 0 ? `👤 Ref: ${m.referees[0].name}` : `Matchday ${m.matchday || '—'}`}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* COMPACT GROUP STANDINGS LEAGUE TABLES DISPLAY */}
+      <div className="space-y-4 font-sans">
+        <div>
+          <h4 className="text-lg font-black text-white uppercase tracking-wider font-display flex items-center gap-2">
+            <Globe className="w-5 h-5 text-emerald-500 animate-pulse" /> Live League Tables & Logos
+          </h4>
+          <p className="text-xs text-gray-400 font-bold">
+            Real-time standings with active goals index, points matrix, and official crest alignments.
+          </p>
+        </div>
+
+        {standings.length === 0 ? (
+          <div className="bg-[#11141e] border border-[#212739] py-10 text-center rounded-2xl">
+            <p className="text-xs text-gray-400 font-bold uppercase font-bold">No official league standings cached. Loading fallback matrix...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {standings.filter((s: any) => s.type === 'TOTAL').map((standing: any) => (
+              <div key={standing.group} className="bg-[#11141e] border border-[#212739] rounded-xl overflow-hidden shadow-md">
+                <div className="bg-[#171d2c] px-4 py-3 border-b border-[#212739] flex justify-between items-center">
+                  <span className="font-black text-xs text-white uppercase tracking-wider font-display">
+                    Group {standing.group ? standing.group.replace('GROUP_', '') : 'A'}
+                  </span>
+                  <span className="text-[9px] font-mono text-gray-500 uppercase font-black">Official Standings</span>
+                </div>
+
+                <table className="w-full text-left text-xs text-gray-300">
+                  <thead>
+                    <tr className="border-b border-[#1c2232] text-[9px] font-mono text-gray-500 uppercase tracking-wider bg-black/15 font-black">
+                      <th className="py-2.5 px-3 font-extrabold text-left">Pos</th>
+                      <th className="py-2.5 px-3 font-extrabold text-left">Team</th>
+                      <th className="py-2.5 px-2 font-extrabold text-center">P</th>
+                      <th className="py-2.5 px-2 font-extrabold text-center">W</th>
+                      <th className="py-2.5 px-2 font-extrabold text-center">D</th>
+                      <th className="py-2.5 px-2 font-extrabold text-center">L</th>
+                      <th className="py-2.5 px-2 font-extrabold text-center">GD</th>
+                      <th className="py-2.5 px-3 font-extrabold text-right">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {standing.table?.map((row: any) => (
+                      <tr key={row.team?.id} className="border-b border-[#1c2232]/50 hover:bg-[#141924]/30 transition-all font-bold">
+                        <td className="py-2.5 px-3 text-gray-400 font-mono text-center w-6 text-[11px]">{row.position}</td>
+                        <td className="py-2.5 px-3 font-black text-white flex items-center space-x-2">
+                          <div className="h-5 w-5 bg-black/20 rounded border border-white/5 flex items-center justify-center p-0.5 shrink-0">
+                            {row.team?.crest ? (
+                              <img 
+                                src={row.team.crest} 
+                                alt={row.team.name} 
+                                className="max-h-full max-w-full object-contain" 
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  const parent = (e.target as HTMLElement).parentElement;
+                                  if (parent) {
+                                    const span = document.createElement('span');
+                                    span.className = 'text-[10px]';
+                                    span.innerText = getFlagFallback(row.team?.tla || '');
+                                    parent.appendChild(span);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="text-[10px]">{getFlagFallback(row.team?.tla || '')}</span>
+                            )}
+                          </div>
+                          <span className="truncate max-w-[100px]">{row.team?.shortName || row.team?.name || row.team?.tla}</span>
+                        </td>
+                        <td className="py-2.5 px-2 text-center text-gray-300 font-mono text-[11px]">{row.playedGames}</td>
+                        <td className="py-2.5 px-2 text-center text-emerald-400 font-mono text-[11px]">{row.won}</td>
+                        <td className="py-2.5 px-2 text-center text-gray-400 font-mono text-[11px]">{row.draw}</td>
+                        <td className="py-2.5 px-2 text-center text-red-400 font-mono text-[11px]">{row.lost}</td>
+                        <td className="py-2.5 px-2 text-center text-gray-300 font-mono text-[11px]">
+                          {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-[#d4af37] text-[11px]">{row.points}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

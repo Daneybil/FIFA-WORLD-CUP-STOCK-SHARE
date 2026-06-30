@@ -44,7 +44,7 @@ import {
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { sendPasswordResetEmail, sendEmailVerification, reload } from 'firebase/auth';
-import { getLatestPublicTransactions, getUserNotifications, markNotificationReadInFirestore, clearAllUserNotificationsInFirestore, createSupportTicket } from '../lib/firebase-service';
+import { getLatestPublicTransactions, getUserNotifications, markNotificationReadInFirestore, clearAllUserNotificationsInFirestore, createSupportTicket, getOrCreateUserProfile } from '../lib/firebase-service';
 import PurchaseModal from './PurchaseModal';
 import SellModal from './SellModal';
 import { Logo } from './Logo';
@@ -202,33 +202,18 @@ export default function PortalDashboard({
     // Load from Firestore users collection
     const loadProfileData = async () => {
       try {
-        const userRef = doc(db, 'users', currentUser.uid);
-        const snap = await getDoc(userRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          setUserProfile({
-            displayName: data.displayName || currentUser.displayName || '',
-            username: data.username || currentUser.email.split('@')[0] || '',
-            phoneNumber: data.phoneNumber || '',
-            createdAt: data.createdAt || new Date().toLocaleDateString(),
-            referralCode: data.referralCode || '',
-            referredBy: data.referredBy || '',
-            referralWallet: data.referralWallet || 0,
-            referralCount: data.referralCount || 0,
-            referralEarnings: data.referralEarnings || 0
-          });
-        } else {
-          setUserProfile({
-            displayName: currentUser.displayName || '',
-            username: currentUser.email.split('@')[0] || '',
-            phoneNumber: '',
-            createdAt: new Date().toLocaleDateString(),
-            referralCode: '',
-            referralWallet: 0,
-            referralCount: 0,
-            referralEarnings: 0
-          });
-        }
+        const profile = await getOrCreateUserProfile(currentUser.uid, currentUser.email || '', currentUser.displayName || '');
+        setUserProfile({
+          displayName: profile.displayName || currentUser.displayName || '',
+          username: (profile as any).username || currentUser.email.split('@')[0] || '',
+          phoneNumber: (profile as any).phoneNumber || '',
+          createdAt: (profile as any).createdAt || new Date().toLocaleDateString(),
+          referralCode: profile.referralCode || '',
+          referredBy: profile.referredBy || '',
+          referralWallet: profile.referralWallet || 0,
+          referralCount: profile.referralCount || 0,
+          referralEarnings: profile.referralEarnings || 0
+        });
       } catch (err) {
         console.error("Error loading user profile doc:", err);
       }
@@ -752,7 +737,7 @@ export default function PortalDashboard({
               </div>
 
               {/* Bento Grid Analytics */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 
                 {/* Metric 1 - TOTAL PORTFOLIO VALUE */}
                 <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(16,185,129,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
@@ -796,6 +781,25 @@ export default function PortalDashboard({
                       >
                         Withdrawal
                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metric 5 - REFERRAL WALLET BALANCE */}
+                <div className="bg-[#0b0d15]/90 backdrop-blur-md border border-[#d4af37]/20 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37]/40 hover:shadow-[0_12px_40px_rgba(212,175,55,0.1)] transition-all duration-300 select-none flex flex-col justify-between relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#d4af37]/5 to-transparent blur-xl pointer-events-none" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider font-mono">REFERRAL WALLET BALANCE</span>
+                    <Gift className="w-4 h-4 text-[#d4af37]" />
+                  </div>
+                  <div className="mt-4 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-3xl font-extrabold font-mono text-emerald-400 tracking-tight">
+                        ${(userProfile.referralWallet || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <p className="text-[9px] text-gray-500 mt-1.5 font-semibold">
+                        Earned from referrals • Unlocks at 10 referrals (Current: {userProfile.referralCount || 0}/10)
+                      </p>
                     </div>
                   </div>
                 </div>

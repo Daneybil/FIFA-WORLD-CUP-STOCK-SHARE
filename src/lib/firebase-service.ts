@@ -31,8 +31,9 @@ export interface UserProfile {
 function generateReferralCode(uid: string): string {
   const cleanUid = uid.replace(/[^a-zA-Z0-9]/g, '');
   const prefix = cleanUid.slice(0, 3).toUpperCase() || 'WCS';
-  const randomSuffix = Math.floor(100 + Math.random() * 900);
-  return `${prefix}${randomSuffix}`;
+  const uidPart = cleanUid.slice(-4).toUpperCase() || 'XYZ';
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  return `${prefix}-${uidPart}-${randomSuffix}`;
 }
 
 // 1. Fetch or create a user profile in Firestore

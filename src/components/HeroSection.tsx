@@ -599,7 +599,7 @@ export default function HeroSection({
             <div className="flex items-center space-x-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0" />
               <span className="font-extrabold text-xs sm:text-sm text-white font-sans tracking-wide uppercase leading-none">
-                {tLocal('video_title')}
+                LIVE BROADCAST
               </span>
             </div>
             <div className="hidden sm:flex items-center space-x-1 px-2.5 py-0.5 bg-red-600 rounded text-[9px] font-black text-white uppercase tracking-wider">
@@ -612,7 +612,7 @@ export default function HeroSection({
             {!playClicked ? (
               <div 
                 className="absolute inset-0 w-full h-full cursor-pointer flex flex-col items-center justify-center bg-cover bg-center group"
-                style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url("/image-2.jpg")' }}
+                style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url("https://img.youtube.com/vi/csTVE1KcZLg/maxresdefault.jpg")' }}
                 onClick={() => setPlayClicked(true)}
               >
                 {/* Big pulse play icon inside a premium circle button */}
@@ -629,7 +629,7 @@ export default function HeroSection({
               <iframe 
                 id="hero-presentation-video-frame"
                 className="w-full h-full"
-                src="https://www.youtube.com/embed/g6bE49qD_Wc?autoplay=1" 
+                src="https://www.youtube.com/embed/csTVE1KcZLg?autoplay=1" 
                 title="FIFA Live Stream Presentation"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

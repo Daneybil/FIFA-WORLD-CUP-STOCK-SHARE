@@ -68,7 +68,7 @@ import {
 
 const BLACKLISTED_IDS = [
   'QAT', 'UKR', 'WAL', 'VEN', 'NGA', 'ECU', 'HON', 'NIR', 
-  'POL', 'PER', 'BOL', 'DEN', 'PRY', 'PAR', 'CHI', 'CRC', 
+  'POL', 'PER', 'BOL', 'DEN', 'CHI', 'CRC', 
   'SRB', 'ITA', 'CMR', 'PAN', 'JAM'
 ];
 
@@ -218,7 +218,7 @@ export default function App() {
       'SEN', 'NED', 'ENG', 'IRN', 'USA',
       'ARG', 'KSA', 'MEX', 'FRA', 'AUS', 'TUN',
       'ESP', 'GER', 'JPN', 'BEL', 'CAN', 'MAR', 'CRO',
-      'BRA', 'SUI', 'POR', 'GHA', 'URU', 'KOR'
+      'BRA', 'SUI', 'POR', 'GHA', 'URU', 'KOR', 'PRY'
     ];
     // Filter to only officially qualified World Cup teams on initial load
     const defaultFiltered = INITIAL_COUNTRIES.filter(c => REAL_WORLD_CUP_QUALIFIED_IDS.includes(c.id) && !BLACKLISTED_IDS.includes(c.id));
@@ -421,6 +421,19 @@ export default function App() {
   const [apiSuccessCount, setApiSuccessCount] = useState<number>(() => Number(localStorage.getItem('world_cup_api_success_count') || '1'));
   const [apiFailedCount, setApiFailedCount] = useState<number>(() => Number(localStorage.getItem('world_cup_api_failed_count') || '0'));
 
+  const [rawTeamsData, setRawTeamsData] = useState<any>(() => {
+    const saved = localStorage.getItem('world_cup_raw_teams');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [rawStandingsData, setRawStandingsData] = useState<any>(() => {
+    const saved = localStorage.getItem('world_cup_raw_standings');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [rawMatchesData, setRawMatchesData] = useState<any>(() => {
+    const saved = localStorage.getItem('world_cup_raw_matches');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const [timeLeft, setTimeLeft] = useState({
     days: 31,
     hours: 14,
@@ -604,6 +617,14 @@ export default function App() {
       const matchesData = await matchesRes.json();
       const duration = Date.now() - start;
 
+      setRawTeamsData(teamsData);
+      setRawStandingsData(standingsData);
+      setRawMatchesData(matchesData);
+
+      localStorage.setItem('world_cup_raw_teams', JSON.stringify(teamsData));
+      localStorage.setItem('world_cup_raw_standings', JSON.stringify(standingsData));
+      localStorage.setItem('world_cup_raw_matches', JSON.stringify(matchesData));
+
       const nTeams = (teamsData && Array.isArray(teamsData.teams)) ? teamsData.teams.length : 0;
       const nFixtures = (matchesData && Array.isArray(matchesData.matches)) ? matchesData.matches.length : 0;
       const nStandings = (standingsData && Array.isArray(standingsData.standings)) 
@@ -634,7 +655,7 @@ export default function App() {
         'SEN', 'NED', 'ENG', 'IRN', 'USA',
         'ARG', 'KSA', 'MEX', 'FRA', 'AUS', 'TUN',
         'ESP', 'GER', 'JPN', 'BEL', 'CAN', 'MAR', 'CRO',
-        'BRA', 'SUI', 'POR', 'GHA', 'URU', 'KOR'
+        'BRA', 'SUI', 'POR', 'GHA', 'URU', 'KOR', 'PRY'
       ];
       
       let qualifiedIds = REAL_WOLD_CUP_QUALIFIED_IDS;
@@ -693,9 +714,9 @@ export default function App() {
 
           let status: 'ACTIVE' | 'ELIMINATED' | 'CHAMPION' = existingC?.status || initialC?.status || 'ACTIVE';
           
-          if (apiStats && apiStats.matchesPlayed >= 3 && apiStats.position > 2) {
-            status = 'ELIMINATED';
-          }
+          // Real-world 2026 tournament context: Do not mark countries as ELIMINATED based on historic 2022 group stage positions.
+          // Germany, Paraguay, and all other 32 premium featured countries are actively competing/not eliminated in real life!
+          // We preserve real-world active status and only eliminate if they lose in an actual finished knockout stage match in matchesData.
 
           if (matchesData && Array.isArray(matchesData.matches)) {
             const finalMatch = matchesData.matches.find((m: any) => m.stage === 'FINAL' && m.status === 'FINISHED');
@@ -1963,6 +1984,9 @@ export default function App() {
               apiLoading={apiLoading}
               apiError={apiError}
               onManualTriggerSync={loadFootballData}
+              rawTeamsData={rawTeamsData}
+              rawStandingsData={rawStandingsData}
+              rawMatchesData={rawMatchesData}
             />
           </div>
         )}
@@ -1990,6 +2014,9 @@ export default function App() {
               apiLoading={apiLoading}
               apiError={apiError}
               onManualTriggerSync={loadFootballData}
+              rawTeamsData={rawTeamsData}
+              rawStandingsData={rawStandingsData}
+              rawMatchesData={rawMatchesData}
             />
 
 

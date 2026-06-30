@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getOrCreateUserProfile } from '../lib/firebase-service';
 
 interface ReferralProgramProps {
   currentUser: { email: string; displayName: string; uid: string } | null;
@@ -52,17 +53,13 @@ export default function ReferralProgram({ currentUser, onNavigateLogin, onComple
     const loadProfileData = async () => {
       setLoading(true);
       try {
-        const userRef = doc(db, 'users', currentUser.uid);
-        const snap = await getDoc(userRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          setUserProfile({
-            referralCode: data.referralCode || '',
-            referralWallet: data.referralWallet || 0,
-            referralCount: data.referralCount || 0,
-            referralEarnings: data.referralEarnings || 0
-          });
-        }
+        const profile = await getOrCreateUserProfile(currentUser.uid, currentUser.email || '', currentUser.displayName || '');
+        setUserProfile({
+          referralCode: profile.referralCode || '',
+          referralWallet: profile.referralWallet || 0,
+          referralCount: profile.referralCount || 0,
+          referralEarnings: profile.referralEarnings || 0
+        });
       } catch (err) {
         console.error("Error loading user profile doc in ReferralProgram page:", err);
       } finally {
