@@ -587,7 +587,7 @@ export default function App() {
       console.log("Fetching live Football-Data.org API endpoints...");
       const start = Date.now();
       
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://fifa-world-cup-stock-share-production.up.railway.app";
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
       
       const [teamsRes, standingsRes, matchesRes] = await Promise.all([
         fetch(`${backendUrl}/api/football/teams`),

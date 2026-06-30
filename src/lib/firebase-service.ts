@@ -148,7 +148,7 @@ export async function createPaymentSession(userId: string, data: {
 // 3. Confirm Payment and Atopically execute Holdings & Transactions Records in Firestore
 export async function verifyAndProcessPayment(userId: string, paymentId: string): Promise<boolean> {
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://fifa-world-cup-stock-share-production.up.railway.app";
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
     const response = await fetch(`${backendUrl}/api/payments/verify-crypto`, {
       method: 'POST',
       headers: {
@@ -368,7 +368,7 @@ export async function createSupportTicket(userId: string, ticketData: {
   screenshot?: string; // base64 encoded
 }): Promise<string> {
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://fifa-world-cup-stock-share-production.up.railway.app";
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
     const response = await fetch(`${backendUrl}/api/support/ticket`, {
       method: 'POST',
       headers: {

@@ -95,7 +95,7 @@ export default function PurchaseModal({
     setErrorMsg(null);
     try {
       // Create real Stripe checkout session on Express server and redirect
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://fifa-world-cup-stock-share-production.up.railway.app";
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
       const response = await fetch(`${backendUrl}/api/payments/create-checkout-session`, {
         method: 'POST',
         headers: {

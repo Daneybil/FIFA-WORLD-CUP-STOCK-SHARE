@@ -630,7 +630,9 @@ app.post("/api/support/ticket", express.json({ limit: "10mb" }), async (req, res
 // ========================================== VITE DEVELOPEMENT OR STATIC PRODUCTION MIDDLEWARE
 
 async function setupServer() {
-  if (process.env.NODE_ENV !== "production") {
+  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(process.cwd(), "dist"));
+  
+  if (!isProduction) {
     // Development mode: mount Vite dev server as middleware
     console.log("[Server] Launching in Development mode with active Vite middleware...");
     const vite = await createViteServer({
