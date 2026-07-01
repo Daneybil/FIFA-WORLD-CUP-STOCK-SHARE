@@ -21,6 +21,7 @@ export interface UserProfile {
   displayName: string;
   balance: number;
   totalInvested: number;
+  phoneNumber?: string;
   referralCode?: string;
   referredBy?: string;
   referralWallet?: number;
@@ -37,7 +38,7 @@ function generateReferralCode(uid: string): string {
 }
 
 // 1. Fetch or create a user profile in Firestore
-export async function getOrCreateUserProfile(uid: string, email: string, displayName: string): Promise<UserProfile> {
+export async function getOrCreateUserProfile(uid: string, email: string, displayName: string, phoneNumber?: string): Promise<UserProfile> {
   const userDocRef = doc(db, 'users', uid);
   const userDocSnap = await getDoc(userDocRef);
 
@@ -46,6 +47,12 @@ export async function getOrCreateUserProfile(uid: string, email: string, display
     if (data.balance === 1000.00 || data.balance === 0) {
       data.balance = 5000.00;
       await updateDoc(userDocRef, { balance: 5000.00 });
+    }
+    
+    // Auto-update phone number if it's missing in database but present in auth
+    if (phoneNumber && !data.phoneNumber) {
+      await updateDoc(userDocRef, { phoneNumber });
+      data.phoneNumber = phoneNumber;
     }
     
     // Auto-generate referral code for existing users if missing
@@ -89,7 +96,7 @@ export async function getOrCreateUserProfile(uid: string, email: string, display
     const defaultProfile: UserProfile = {
       uid,
       email,
-      displayName: displayName || email.split('@')[0],
+      displayName: displayName || email.split('@')[0] || 'Investor',
       balance: 5000.00, // Starts at $5,000.00 for demo/testing purposes as requested
       totalInvested: 0,
       referralCode: code,
@@ -97,6 +104,10 @@ export async function getOrCreateUserProfile(uid: string, email: string, display
       referralCount: 0,
       referralEarnings: 0
     };
+
+    if (phoneNumber) {
+      defaultProfile.phoneNumber = phoneNumber;
+    }
 
     if (referredByUid) {
       defaultProfile.referredBy = referredByUid;

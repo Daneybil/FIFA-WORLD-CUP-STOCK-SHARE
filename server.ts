@@ -84,6 +84,12 @@ async function getCachedFootballData(cacheKey: string, apiPath: string) {
 
 // ========================================== PROXIED API ENDPOINTS
 
+// Sitemap endpoint
+app.get("/sitemap.xml", (req, res) => {
+  res.header('Content-Type', 'application/xml');
+  res.sendFile(path.join(process.cwd(), "public", "sitemap.xml"));
+});
+
 // 1. Teams endpoint: /api/football/teams
 app.get("/api/football/teams", async (req, res) => {
   try {

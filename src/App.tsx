@@ -214,21 +214,12 @@ export default function App() {
   // States with persistent LocalStorage retrieval
   const [countries, setCountries] = useState<CountryShare[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_countries');
-    const REAL_WORLD_CUP_QUALIFIED_IDS = [
-      'SEN', 'NED', 'ENG', 'IRN', 'USA',
-      'ARG', 'KSA', 'MEX', 'FRA', 'AUS', 'TUN',
-      'ESP', 'GER', 'JPN', 'BEL', 'CAN', 'MAR', 'CRO',
-      'BRA', 'SUI', 'POR', 'GHA', 'URU', 'KOR', 'PRY'
-    ];
-    // Filter to only officially qualified World Cup teams on initial load
-    const defaultFiltered = INITIAL_COUNTRIES.filter(c => REAL_WORLD_CUP_QUALIFIED_IDS.includes(c.id) && !BLACKLISTED_IDS.includes(c.id));
-    let loaded = defaultFiltered;
+    let loaded = INITIAL_COUNTRIES;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Keep only saved items that are officially qualified to prevent any mock teams from appearing
-          loaded = parsed.filter(c => (REAL_WORLD_CUP_QUALIFIED_IDS.includes(c.id) || parsed.length <= 48) && !BLACKLISTED_IDS.includes(c.id));
+          loaded = parsed;
         }
       } catch (e) {}
     }
@@ -240,8 +231,8 @@ export default function App() {
       const dynamicPrice = Math.round(baseSettlement * Math.pow(0.97, wins) * Math.pow(1.05, losses) * 100) / 100;
       return {
         ...c,
-        name: initial.name,
-        flag: initial.flag,
+        name: initial.name || c.name,
+        flag: initial.flag || c.flag || getFlagEmoji(c.id),
         winningSettlementPrice: dynamicPrice
       };
     });
@@ -250,25 +241,25 @@ export default function App() {
   const [fixtures, setFixtures] = useState<MatchFixture[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_fixtures');
     const loaded = saved ? JSON.parse(saved) : INITIAL_FIXTURES;
-    return Array.isArray(loaded) ? loaded.filter((f: MatchFixture) => !BLACKLISTED_IDS.includes(f.homeTeamId) && !BLACKLISTED_IDS.includes(f.awayTeamId)) : [];
+    return Array.isArray(loaded) ? loaded : [];
   });
 
   const [holdings, setHoldings] = useState<ShareHolding[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_holdings');
     const loaded = saved ? JSON.parse(saved) : []; // Seeding empty holdings so users can buy freely
-    return Array.isArray(loaded) ? loaded.filter((h: ShareHolding) => !BLACKLISTED_IDS.includes(h.countryId)) : [];
+    return Array.isArray(loaded) ? loaded : [];
   });
 
   const [transactions, setTransactions] = useState<TransactionRecord[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_transactions');
     const loaded = saved ? JSON.parse(saved) : [];
-    return Array.isArray(loaded) ? loaded.filter((t: TransactionRecord) => !BLACKLISTED_IDS.includes(t.countryId)) : [];
+    return Array.isArray(loaded) ? loaded : [];
   });
 
   const [activities, setActivities] = useState<MarketActivity[]>(() => {
     const saved = localStorage.getItem('world_cup_shares_activities');
     const loaded = saved ? JSON.parse(saved) : INITIAL_ACTIVITIES;
-    return Array.isArray(loaded) ? loaded.filter((act: MarketActivity) => !BLACKLISTED_IDS.includes(act.countryId)) : [];
+    return Array.isArray(loaded) ? loaded : [];
   });
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
@@ -286,19 +277,77 @@ export default function App() {
   });
 
   // User persistent authentication state pre-linked for Firebase
-  const [currentUser, setCurrentUser] = useState<{ email: string; displayName: string; uid: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ email: string; displayName: string; uid: string; phoneNumber?: string } | null>(null);
+
+  // Professional Code Protection & Privacy System
+  // Blocks right-click inspect, F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+Shift+J, Ctrl+U and alerts on DevTools detection.
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Disable F12
+      if (e.key === 'F12' || e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+      }
+      // Disable Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+Shift+J (or Cmd+Alt+I/C/J on macOS)
+      if (
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'C' || e.key === 'J' || e.keyCode === 73 || e.keyCode === 67 || e.keyCode === 74)) ||
+        (e.metaKey && e.altKey && (e.key === 'i' || e.key === 'c' || e.key === 'j' || e.key === 'I' || e.key === 'C' || e.key === 'J'))
+      ) {
+        e.preventDefault();
+        return false;
+      }
+      // Disable Ctrl+U (View Source)
+      if (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.keyCode === 85)) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    window.addEventListener('contextmenu', handleContextMenu, { capture: true });
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+
+    // Anti-debugging loop (adds a debugger breakpoint if devtools is open, making inspection impossible)
+    const interval = setInterval(() => {
+      try {
+        (function() {
+          (function a() {
+            debugger;
+          }());
+        }());
+      } catch (err) {}
+    }, 1000);
+
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+      clearInterval(interval);
+    };
+  }, []);
 
   // Sync Firebase authentication status
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const email = firebaseUser.email || '';
-        const displayName = firebaseUser.displayName || email.split('@')[0] || 'Investor';
+        // Enforce email verification for standard email/password provider
+        const isEmailProvider = firebaseUser.providerData.some(p => p.providerId === 'password');
+        if (isEmailProvider && !firebaseUser.emailVerified) {
+          await auth.signOut();
+          setCurrentUser(null);
+          return;
+        }
+
+        const email = firebaseUser.email || firebaseUser.phoneNumber || '';
+        const displayName = firebaseUser.displayName || firebaseUser.phoneNumber || email.split('@')[0] || 'Investor';
         
         setCurrentUser({
           email,
           displayName,
-          uid: firebaseUser.uid
+          uid: firebaseUser.uid,
+          phoneNumber: firebaseUser.phoneNumber || undefined
         });
 
         // Pull verified real persistent logs from Firebase Firestore
@@ -349,7 +398,12 @@ export default function App() {
 
   const syncFirebaseData = async (uid: string) => {
     try {
-      const profile = await getOrCreateUserProfile(uid, auth.currentUser?.email || '', auth.currentUser?.displayName || '');
+      const profile = await getOrCreateUserProfile(
+        uid, 
+        auth.currentUser?.email || auth.currentUser?.phoneNumber || '', 
+        auth.currentUser?.displayName || auth.currentUser?.phoneNumber || 'Investor',
+        auth.currentUser?.phoneNumber || undefined
+      );
       setUserCash(profile.balance);
 
       const realHoldings = await getUserHoldings(uid);
@@ -650,20 +704,7 @@ export default function App() {
       localStorage.setItem('world_cup_shares_num_fixtures_loaded', String(nFixtures));
       localStorage.setItem('world_cup_shares_num_standings_loaded', String(nStandings));
 
-      // 1. Filter qualified countries (exclude any non-qualified or mock-up team that is not part of the WC dataset)
-      const REAL_WOLD_CUP_QUALIFIED_IDS = [
-        'SEN', 'NED', 'ENG', 'IRN', 'USA',
-        'ARG', 'KSA', 'MEX', 'FRA', 'AUS', 'TUN',
-        'ESP', 'GER', 'JPN', 'BEL', 'CAN', 'MAR', 'CRO',
-        'BRA', 'SUI', 'POR', 'GHA', 'URU', 'KOR', 'PRY'
-      ];
-      
-      let qualifiedIds = REAL_WOLD_CUP_QUALIFIED_IDS;
-      if (teamsData && Array.isArray(teamsData.teams) && teamsData.teams.length > 0) {
-        qualifiedIds = teamsData.teams.map((t: any) => t.tla?.toUpperCase()).filter((id: string) => id && !BLACKLISTED_IDS.includes(id));
-      }
-
-      // 2. Parse Group Standings statistics matrix
+      // 1. Parse Group Standings statistics matrix
       const statsMap: Record<string, { wins: number; draws: number; losses: number; goalsScored: number; goalsConceded: number; matchesPlayed: number; group: string; position: number }> = {};
       
       if (standingsData && Array.isArray(standingsData.standings)) {
@@ -688,7 +729,7 @@ export default function App() {
         });
       }
 
-      // 3. Update active lists & stats and resolve statuses
+      // 2. Update active lists & stats and resolve statuses
       setCountries(prevList => {
         if (!teamsData || !Array.isArray(teamsData.teams) || teamsData.teams.length === 0) {
           return prevList;
@@ -696,7 +737,7 @@ export default function App() {
 
         return teamsData.teams.map((apiTeam: any) => {
           const id = apiTeam.tla?.toUpperCase();
-          if (!id || BLACKLISTED_IDS.includes(id)) return null;
+          if (!id) return null;
 
           const initialC = INITIAL_COUNTRIES.find(c => c.id === id);
           const existingC = prevList.find(c => c.id === id);
@@ -820,8 +861,6 @@ export default function App() {
         const loadedFixtures: MatchFixture[] = matchesData.matches.map((m: any) => {
           const homeTla = m.homeTeam?.tla?.toUpperCase() || 'TBD';
           const awayTla = m.awayTeam?.tla?.toUpperCase() || 'TBD';
-          if (homeTla !== 'TBD' && BLACKLISTED_IDS.includes(homeTla)) return null;
-          if (awayTla !== 'TBD' && BLACKLISTED_IDS.includes(awayTla)) return null;
           
           return {
             id: String(m.id),
