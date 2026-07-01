@@ -45,7 +45,9 @@ export default function InvestorCalculator({
     description: 'A solid contender from South America.'
   };
 
-  const activeCountries = countries.length > 0 ? countries : [fallbackCountry];
+  const activeCountries = countries.length > 0 
+    ? countries.filter(c => c.status !== 'ELIMINATED') 
+    : [fallbackCountry];
 
   // Selected country state
   const [selectedCountryId, setSelectedCountryId] = useState<string>(() => {

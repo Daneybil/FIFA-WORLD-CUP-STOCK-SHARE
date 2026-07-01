@@ -513,7 +513,7 @@ export default function TournamentCenter({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((grp) => {
-                const grpCountries = countries.filter(c => c.group === grp);
+                const grpCountries = countries.filter(c => c.group === grp && c.status !== 'ELIMINATED');
                 if (grpCountries.length === 0) return null;
                 return (
                   <div key={grp} className="bg-[#11141e] border border-[#212739] rounded-xl overflow-hidden shadow-md">

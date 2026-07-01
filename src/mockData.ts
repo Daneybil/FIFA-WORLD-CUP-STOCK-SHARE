@@ -1101,11 +1101,7 @@ const ALL_MOCK_COUNTRIES: CountryShare[] = [
   }
 ];
 
-const BLACKLISTED_IDS = [
-  'QAT', 'UKR', 'WAL', 'VEN', 'NGA', 'ECU', 'HON', 'NIR', 
-  'POL', 'PER', 'BOL', 'DEN', 'PRY', 'PAR', 'CHI', 'CRC', 
-  'SRB', 'ITA', 'CMR', 'PAN', 'JAM'
-];
+const BLACKLISTED_IDS: string[] = [];
 
 export const INITIAL_COUNTRIES: CountryShare[] = ALL_MOCK_COUNTRIES.filter(
   c => !BLACKLISTED_IDS.includes(c.id)

@@ -7,8 +7,10 @@ interface MarketTickerProps {
 }
 
 export default function MarketTicker({ countries }: MarketTickerProps) {
+  // Filter out any eliminated countries from ticker scroll
+  const activeCountries = countries.filter(c => c.status !== 'ELIMINATED');
   // Duplicate the list of countries to create a seamless infinite marquee scroll
-  const sortedAndDuplicated = [...countries, ...countries, ...countries];
+  const sortedAndDuplicated = [...activeCountries, ...activeCountries, ...activeCountries];
 
   return (
     <div className="bg-[#0b0d12] border-b border-[#181a20] py-2.5 overflow-hidden relative select-none z-10">

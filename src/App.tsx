@@ -753,46 +753,49 @@ export default function App() {
             matchesPlayed: apiStats.matchesPlayed
           } : (existingC?.statistics || initialC?.statistics || { wins: 0, draws: 0, losses: 0, goalsScored: 0, goalsConceded: 0, matchesPlayed: 0 });
 
-          let status: 'ACTIVE' | 'ELIMINATED' | 'CHAMPION' = existingC?.status || initialC?.status || 'ACTIVE';
-          
-          // Real-world 2026 tournament context: Do not mark countries as ELIMINATED based on historic 2022 group stage positions.
-          // Germany, Paraguay, and all other 32 premium featured countries are actively competing/not eliminated in real life!
-          // We preserve real-world active status and only eliminate if they lose in an actual finished knockout stage match in matchesData.
+          let status: 'ACTIVE' | 'ELIMINATED' | 'CHAMPION' = 'ACTIVE';
 
-          if (matchesData && Array.isArray(matchesData.matches)) {
-            const finalMatch = matchesData.matches.find((m: any) => m.stage === 'FINAL' && m.status === 'FINISHED');
-            if (finalMatch) {
-              const winnerTla = finalMatch.score?.winner === 'HOME_TEAM' 
-                ? finalMatch.homeTeam?.tla 
-                : finalMatch.score?.winner === 'AWAY_TEAM' 
-                ? finalMatch.awayTeam?.tla 
-                : null;
-              
-              if (winnerTla && winnerTla.toUpperCase() === id) {
-                status = 'CHAMPION';
-              } else if (winnerTla) {
-                if (finalMatch.homeTeam?.tla?.toUpperCase() === id || finalMatch.awayTeam?.tla?.toUpperCase() === id) {
-                  status = 'ELIMINATED';
+          // A. Group Standings check (3 played games and position > 2 means eliminated in standard 4-team groups)
+          if (standingsData && Array.isArray(standingsData.standings)) {
+            for (const standing of standingsData.standings) {
+              if (Array.isArray(standing.table)) {
+                const teamRow = standing.table.find((row: any) => row.team?.tla?.toUpperCase() === id);
+                if (teamRow) {
+                  if (teamRow.playedGames === 3 && teamRow.position > 2) {
+                    status = 'ELIMINATED';
+                  }
+                  break;
                 }
               }
             }
+          }
+
+          // B. Knockout Stage check (loss in any finished knockout stage match means eliminated)
+          if (matchesData && Array.isArray(matchesData.matches)) {
+            const knockoutStages = [
+              'ROUND_OF_16', 'LAST_16', 'ROUND_16', 'ROUND_OF_32', 'LAST_32', 'ROUND_32',
+              'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL'
+            ];
 
             matchesData.matches.forEach((m: any) => {
-              if (m.status === 'FINISHED' && m.stage !== 'GROUP_STAGE') {
+              if (m.status === 'FINISHED' && m.stage && knockoutStages.includes(m.stage.toUpperCase())) {
                 const homeTla = m.homeTeam?.tla?.toUpperCase();
                 const awayTla = m.awayTeam?.tla?.toUpperCase();
+
                 if (homeTla === id || awayTla === id) {
                   const winner = m.score?.winner;
-                  if (winner === 'HOME_TEAM' && awayTla === id) {
-                    status = 'ELIMINATED';
-                  } else if (winner === 'AWAY_TEAM' && homeTla === id) {
-                    status = 'ELIMINATED';
-                  } else if (m.score?.fullTime?.home !== null && m.score?.fullTime?.away !== null) {
-                    const hScore = m.score.fullTime.home ?? 0;
-                    const aScore = m.score.fullTime.away ?? 0;
-                    if (hScore > aScore && awayTla === id) {
+                  if (m.stage.toUpperCase() === 'FINAL') {
+                    if (winner === 'HOME_TEAM' && homeTla === id) {
+                      status = 'CHAMPION';
+                    } else if (winner === 'AWAY_TEAM' && awayTla === id) {
+                      status = 'CHAMPION';
+                    } else {
                       status = 'ELIMINATED';
-                    } else if (aScore > hScore && homeTla === id) {
+                    }
+                  } else {
+                    if (winner === 'HOME_TEAM' && awayTla === id) {
+                      status = 'ELIMINATED';
+                    } else if (winner === 'AWAY_TEAM' && homeTla === id) {
                       status = 'ELIMINATED';
                     }
                   }
@@ -1934,7 +1937,7 @@ export default function App() {
 
               {/* Grid matching user screenshot */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {countries.slice(0, 8).map((country) => {
+                {countries.filter(c => c.status !== 'ELIMINATED').slice(0, 8).map((country) => {
                   return (
                     <div 
                       key={country.id} 

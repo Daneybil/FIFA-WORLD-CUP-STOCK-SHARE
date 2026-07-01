@@ -1103,6 +1103,7 @@ export default function PortalDashboard({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {countries
                   .filter((c) => {
+                    if (c.status === 'ELIMINATED') return false;
                     const matchesSearch = c.name.toLowerCase().includes(marketSearch.toLowerCase());
                     if (activeRegionFilter === 'ALL') return matchesSearch;
                     return matchesSearch && c.group?.toUpperCase().includes(activeRegionFilter === 'EUROPE' ? 'EU' : activeRegionFilter === 'AMERICAS' ? 'AM' : 'AS');
@@ -1304,12 +1305,12 @@ export default function PortalDashboard({
                     <p className="text-[11px] text-gray-400 mt-1">Official FIFA tournament participants loaded directly from football-data.org.</p>
                   </div>
                   <span className="text-xs text-gray-400 bg-[#121622] px-3 py-1 border border-[#21293c] rounded-lg font-mono">
-                    {countries.length} Squads Registered
+                    {countries.filter(c => c.status !== 'ELIMINATED').length} Squads Active
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {countries.map((c) => {
+                  {countries.filter(c => c.status !== 'ELIMINATED').map((c) => {
                     const status = c.status || 'ACTIVE';
                     return (
                       <div key={c.id} className="p-4 bg-[#131724]/70 border border-[#21293c] rounded-xl flex flex-col justify-between space-y-3">

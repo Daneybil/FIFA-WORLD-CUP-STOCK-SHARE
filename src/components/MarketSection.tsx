@@ -32,6 +32,11 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
 
   // Filter countries
   const filteredCountries = countries.filter((country) => {
+    // Countries eliminated from the tournament should automatically disappear from the investment list
+    if (country.status === 'ELIMINATED') {
+      return false;
+    }
+
     // Search
     const matchesSearch = 
       country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -40,18 +45,16 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
     // Tabs
     let matchesTab = true;
     if (activeTab === 'trending') {
-      const EXCLUSIVE_TRENDING_IDS = ['CAN', 'USA', 'MEX', 'BRA', 'GER', 'FRA', 'ESP', 'NOR', 'ENG', 'POR', 'ARG'];
-      matchesTab = EXCLUSIVE_TRENDING_IDS.includes(country.id.toUpperCase());
+      // Dynamic trending: active teams with high popularity score
+      matchesTab = country.popularityScore >= 80;
     } else if (activeTab === 'speculative') {
-      matchesTab = country.status !== 'ELIMINATED' && (country.winningSettlementPrice / country.currentPrice >= 12); // 12x or higher potential return
+      matchesTab = (country.winningSettlementPrice / country.currentPrice >= 12); // 12x or higher potential return
     } else if (activeTab === 'group') {
-      matchesTab = country.status !== 'ELIMINATED' && (selectedGroup === 'All' ? true : country.group === selectedGroup);
+      matchesTab = (selectedGroup === 'All' ? true : country.group === selectedGroup);
     } else if (activeTab === 'active') {
       matchesTab = country.status === 'ACTIVE' || country.status === 'CHAMPION';
     } else if (activeTab === 'eliminated') {
-      matchesTab = country.status === 'ELIMINATED';
-    } else {
-      matchesTab = country.status !== 'ELIMINATED';
+      matchesTab = false; // Eliminated are completely hidden from the investment list
     }
 
     return matchesSearch && matchesTab;
