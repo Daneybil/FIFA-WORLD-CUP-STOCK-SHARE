@@ -11,7 +11,15 @@ import {
   AlertTriangle,
   RefreshCw,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Send,
+  Mail,
+  Link,
+  MessageSquare,
+  Share2
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -129,6 +137,21 @@ export default function ReferralProgram({ currentUser, onNavigateLogin, onComple
 
   const referralCodeToShow = currentUser ? (userProfile.referralCode || 'WCS-PENDING') : 'WCS-GUESTCODE';
   const referralLinkToShow = `${window.location.origin}?ref=${referralCodeToShow}`;
+  const promoMessage = `🏆 FIFA World Cup Stock Share Platform ⚽
+
+I'm inviting you to join the official FIFA World Cup Country Stock Share platform! 
+
+This is a unique opportunity available exclusively during the World Cup tournament, which concludes with the grand Final on 19 July.
+
+📈 How it works:
+- Invest in countries you believe will perform well.
+- Buy shares in one or multiple competing nations.
+- Watch share values adjust in real-time as team survival is determined!
+
+Join early to secure your country shares and be part of this premium investment opportunity.
+
+Register your secure investor account now using my referral link:
+${referralLinkToShow}`;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-300">
@@ -218,29 +241,162 @@ export default function ReferralProgram({ currentUser, onNavigateLogin, onComple
 
             <div className="bg-[#121622] p-4.5 rounded-xl border border-[#21293c] space-y-3">
               <span className="text-[10px] font-extrabold text-[#d4af37] uppercase tracking-wider block text-left">Your Direct Invitation Link</span>
-              <div className="flex items-center gap-3">
-                <div className="bg-[#080a10] border border-white/10 px-3 py-3 rounded-lg text-xs font-mono text-gray-400 flex-grow truncate select-all text-left">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="bg-[#080a10] border border-white/10 px-3 py-3 rounded-lg text-xs font-mono text-gray-400 flex-grow truncate select-all text-left flex items-center">
                   {referralLinkToShow}
                 </div>
-                <button
-                  disabled={!currentUser}
-                  onClick={() => {
-                    navigator.clipboard.writeText(referralLinkToShow);
-                    setCopiedLink(true);
-                    setTimeout(() => setCopiedLink(false), 2000);
-                  }}
-                  className="bg-[#1c2335] hover:bg-[#d4af37] hover:text-black border border-white/10 px-4 py-3.5 rounded-lg text-xs font-bold text-white transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
-                >
-                  {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copiedLink ? 'COPIED' : 'COPY'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={!currentUser}
+                    onClick={() => {
+                      navigator.clipboard.writeText(referralLinkToShow);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2000);
+                    }}
+                    className="flex-1 sm:flex-initial bg-[#1c2335] hover:bg-white/10 border border-white/10 px-4 py-3.5 rounded-lg text-xs font-bold text-white transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                    title="Copy Link to Clipboard"
+                  >
+                    {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    {copiedLink ? 'COPIED' : 'COPY'}
+                  </button>
+                  <button
+                    disabled={!currentUser}
+                    onClick={async () => {
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({
+                            title: 'FIFA World Cup Stock Share',
+                            text: promoMessage,
+                            url: referralLinkToShow
+                          });
+                        } catch (err) {
+                          console.log('Native share failed or dismissed:', err);
+                        }
+                      } else {
+                        // Smooth scroll down to community sharing redirects if native share is not available
+                        const el = document.getElementById('social-share-section');
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }
+                    }}
+                    className="flex-1 sm:flex-initial bg-[#d4af37] hover:bg-white text-black font-extrabold px-4 py-3.5 rounded-lg text-xs transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                    title="Share Link on Social Media"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    SHARE
+                  </button>
+                </div>
               </div>
               <p className="text-[10px] text-gray-500 text-left">Automatically pre-fills your unique referral code upon landing.</p>
             </div>
           </div>
 
+          {/* 1-Click Social Sharing Section */}
+          <div id="social-share-section" className="pt-6 border-t border-[#1c2335] space-y-4">
+            <div className="text-left">
+              <h4 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider">
+                1-Click Social Sharing
+              </h4>
+              <p className="text-xs text-gray-400 mt-1">
+                Instantly distribute your direct affiliate link across major communities using our persuasive tournament-ready message.
+              </p>
+            </div>
+
+            <div className="bg-[#121622] p-4.5 rounded-xl border border-[#21293c] space-y-4 text-left">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-extrabold text-[#d4af37] uppercase tracking-wider block">
+                  Message Preview
+                </span>
+                <div className="bg-[#080a10] border border-white/10 p-3.5 rounded-lg text-xs font-mono text-gray-400 leading-relaxed max-h-36 overflow-y-auto whitespace-pre-wrap select-all">
+                  {promoMessage}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                {/* WhatsApp */}
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(promoMessage)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 bg-[#0c101b] hover:bg-[#25D366]/20 border border-[#25D366]/30 hover:border-[#25D366] text-white hover:text-[#25D366] rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all text-center"
+                >
+                  <MessageSquare className="w-5 h-5 text-[#25D366]" />
+                  <span>WhatsApp</span>
+                </a>
+
+                {/* Facebook */}
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLinkToShow)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 bg-[#0c101b] hover:bg-[#1877F2]/20 border border-[#1877F2]/30 hover:border-[#1877F2] text-white hover:text-[#1877F2] rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all text-center"
+                >
+                  <Facebook className="w-5 h-5 text-[#1877F2]" />
+                  <span>Facebook</span>
+                </a>
+
+                {/* Twitter (X) */}
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(promoMessage)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 bg-[#0c101b] hover:bg-white/10 border border-white/20 hover:border-white text-white rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all text-center"
+                >
+                  <Twitter className="w-5 h-5 text-gray-300" />
+                  <span>X (Twitter)</span>
+                </a>
+
+                {/* Telegram */}
+                <a
+                  href={`https://t.me/share/url?url=${encodeURIComponent(referralLinkToShow)}&text=${encodeURIComponent(promoMessage)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 bg-[#0c101b] hover:bg-[#0088cc]/20 border border-[#0088cc]/30 hover:border-[#0088cc] text-white hover:text-[#0088cc] rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all text-center"
+                >
+                  <Send className="w-5 h-5 text-[#0088cc]" />
+                  <span>Telegram</span>
+                </a>
+
+                {/* LinkedIn */}
+                <a
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralLinkToShow)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 bg-[#0c101b] hover:bg-[#0077b5]/20 border border-[#0077b5]/30 hover:border-[#0077b5] text-white hover:text-[#0077b5] rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all text-center"
+                >
+                  <Linkedin className="w-5 h-5 text-[#0077b5]" />
+                  <span>LinkedIn</span>
+                </a>
+
+                {/* Email */}
+                <a
+                  href={`mailto:?subject=${encodeURIComponent("FIFA World Cup Stock Share Opportunity ⚽")}&body=${encodeURIComponent(promoMessage)}`}
+                  className="p-3 bg-[#0c101b] hover:bg-[#d4af37]/20 border border-[#d4af37]/30 hover:border-[#d4af37] text-white hover:text-[#d4af37] rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all text-center"
+                >
+                  <Mail className="w-5 h-5 text-[#d4af37]" />
+                  <span>Email</span>
+                </a>
+
+                {/* Copy Link */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(referralLinkToShow);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }}
+                  className="p-3 bg-[#0c101b] hover:bg-[#d4af37] hover:text-black border border-white/10 hover:border-[#d4af37] rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all text-center cursor-pointer text-white"
+                >
+                  {copiedLink ? <Check className="w-5 h-5 text-emerald-400" /> : <Link className="w-5 h-5 text-gray-400" />}
+                  <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Referral Wallet Stats Bento Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[#1c2335]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-[#1c2335]">
             <div className="p-4.5 bg-[#121622] border border-[#21293c] rounded-xl text-center space-y-1">
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total Referrals</span>
               <div className="text-2xl font-black text-white font-display">

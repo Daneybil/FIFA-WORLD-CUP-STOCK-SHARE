@@ -2197,8 +2197,8 @@ export default function App() {
         )}
 
         {activeRoute === 'login' && (
-          <div className="max-w-md mx-auto px-4 py-16 relative z-10 font-sans">
-            <div className="bg-[#0e111a] border border-[#22293d] rounded-2xl p-6 shadow-2xl space-y-4">
+          <div className="max-w-md mx-auto px-4 pt-8 pb-32 relative z-10 font-sans">
+            <div className="bg-[#0e111a] border border-[#22293d] rounded-2xl p-6 shadow-2xl space-y-4 pb-12">
               <div className="text-center pb-2">
                 <span className="text-[10px] text-[#d4af37] font-extrabold tracking-widest uppercase font-mono block">SECURE GATEWAY</span>
                 <h3 className="text-xl font-extrabold text-white font-display uppercase tracking-wider mt-1">Investor Portal Authentication</h3>
@@ -2215,7 +2215,7 @@ export default function App() {
                 }}
               />
 
-              <div className="pt-2 text-center">
+              <div className="pt-2 text-center pb-4">
                 <button
                   onClick={() => setActiveRoute('dashboard')}
                   className="text-xs text-gray-500 hover:text-white font-mono transition-colors"
@@ -2385,8 +2385,8 @@ export default function App() {
 
       {/* Secure Auth Modal overlay */}
       {authModalOpen && (
-        <div className="fixed inset-0 bg-[#07090d]/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="relative bg-[#0e111a] border border-[#22293d] rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <div className="fixed inset-0 bg-[#07090d]/95 backdrop-blur-md z-50 flex items-start justify-center p-4 overflow-y-auto overscroll-behavior-y-contain -webkit-overflow-scrolling-touch">
+          <div className="relative bg-[#0e111a] border border-[#22293d] rounded-2xl max-w-md w-full p-6 mt-4 mb-28 mx-auto shadow-2xl h-auto overflow-visible pb-12">
             {/* Close button */}
             <button 
               onClick={() => { setAuthModalOpen(false); setPendingBuyCountry(null); }}

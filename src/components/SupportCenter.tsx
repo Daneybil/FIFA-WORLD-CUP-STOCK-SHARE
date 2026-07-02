@@ -177,18 +177,49 @@ export default function SupportCenter({ currentUser, onNavigateLogin }: SupportC
               <p className="text-xs text-[#d4af37] font-medium bg-[#080a10] border border-white/5 p-3.5 rounded-lg max-w-md mx-auto leading-relaxed">
                 {supportSuccess.message}
               </p>
-              <button
-                onClick={() => {
-                  setSupportSuccess(null);
-                  setSupportSubject('');
-                  setSupportMessage('');
-                  setSupportScreenshot(null);
-                  setSupportScreenshotName(null);
-                }}
-                className="bg-[#1c2335] hover:bg-[#d4af37] hover:text-black text-white text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-lg transition-all cursor-pointer"
-              >
-                Open Another Ticket
-              </button>
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    const emailTo = "Support@worldcupstock.space";
+                    const emailSubject = `RE: Support Ticket [${supportSuccess.ticketId}] - ${supportSubject}`;
+                    const emailBody = `Dear Support Team,
+
+I am writing regarding a technical inquiry on the FIFA World Cup Equity Platform.
+
+--- SUPPORT TICKET DETAILS ---
+Ticket ID: ${supportSuccess.ticketId}
+Submitted By: ${supportFullName} (${supportEmail})
+Subject: ${supportSubject}
+
+--- INQUIRY MESSAGE ---
+${supportMessage}
+
+------------------------------
+Screenshot Attached: ${supportScreenshotName ? `Yes, "${supportScreenshotName}" (attached file via application)` : 'No'}
+------------------------------
+
+Best regards,
+${supportFullName}`;
+                    window.location.href = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+                  }}
+                  className="bg-gradient-to-r from-[#d4af37] via-[#fde68a] to-[#d4af37] hover:brightness-110 active:scale-98 text-black text-xs font-extrabold uppercase tracking-widest px-6 py-3 rounded-lg transition-all cursor-pointer flex items-center justify-center space-x-1.5 shadow-md"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Launch Mail App</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSupportSuccess(null);
+                    setSupportSubject('');
+                    setSupportMessage('');
+                    setSupportScreenshot(null);
+                    setSupportScreenshotName(null);
+                  }}
+                  className="bg-[#1c2335] hover:bg-[#d4af37] hover:text-black text-white text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-lg transition-all cursor-pointer"
+                >
+                  Open Another Ticket
+                </button>
+              </div>
             </div>
           ) : (
             <form
@@ -202,24 +233,54 @@ export default function SupportCenter({ currentUser, onNavigateLogin }: SupportC
                 setSupportLoading(true);
                 setSupportError(null);
 
+                let ticketId = 'TIC-' + Math.random().toString(36).substring(2, 8).toUpperCase();
                 try {
-                  const ticketId = await createSupportTicket(currentUser?.uid || 'Anonymous', {
+                  const dbTicketId = await createSupportTicket(currentUser?.uid || 'Anonymous', {
                     fullName: supportFullName,
                     email: supportEmail,
                     subject: supportSubject,
                     message: supportMessage,
                     screenshot: supportScreenshot || undefined
                   });
-
-                  setSupportSuccess({
-                    ticketId,
-                    message: `Your support request has been successfully dispatched to Support@worldcupstock.space. Our support team will respond to ${supportEmail} within 12-24 hours.`
-                  });
+                  if (dbTicketId) {
+                    ticketId = dbTicketId;
+                  }
                 } catch (err: any) {
-                  setSupportError(err.message || "Failed to submit ticket.");
-                } finally {
-                  setSupportLoading(false);
+                  console.warn("Firestore ticket creation fallback activated:", err);
                 }
+
+                const emailTo = "Support@worldcupstock.space";
+                const emailSubject = `RE: Support Ticket [${ticketId}] - ${supportSubject}`;
+                const emailBody = `Dear Support Team,
+
+I am writing regarding a technical inquiry on the FIFA World Cup Equity Platform.
+
+--- SUPPORT TICKET DETAILS ---
+Ticket ID: ${ticketId}
+Submitted By: ${supportFullName} (${supportEmail})
+Subject: ${supportSubject}
+
+--- INQUIRY MESSAGE ---
+${supportMessage}
+
+------------------------------
+Screenshot Attached: ${supportScreenshotName ? `Yes, "${supportScreenshotName}" (attached file via application)` : 'No'}
+------------------------------
+
+Best regards,
+${supportFullName}`;
+
+                const mailtoUrl = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+
+                setSupportSuccess({
+                  ticketId,
+                  message: `A support ticket draft has been created. Click "Launch Mail App" below if your default mail application didn't open automatically.`
+                });
+
+                setSupportLoading(false);
+
+                // Open default email client
+                window.location.href = mailtoUrl;
               }}
               className="space-y-4.5 pt-4 border-t border-[#1c2335]"
             >

@@ -13,7 +13,8 @@ service cloud.firestore {
 
     // Rules for Users collection
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isAuth();
+      allow write: if isOwner(userId);
     }
 
     // Rules for Transactions collection

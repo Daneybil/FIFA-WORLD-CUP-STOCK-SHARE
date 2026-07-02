@@ -27,7 +27,8 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
   };
 
   // Calculator states
-  const [calcCountryId, setCalcCountryId] = useState(countries[0]?.id || 'USA');
+  const activeCalcCountries = countries.filter(c => c.status !== 'ELIMINATED');
+  const [calcCountryId, setCalcCountryId] = useState(() => activeCalcCountries[0]?.id || 'USA');
   const [calcAmount, setCalcAmount] = useState<number>(100);
 
   // Filter countries
@@ -60,7 +61,7 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
     return matchesSearch && matchesTab;
   });
 
-  const selectedCalcCountry = countries.find(c => c.id === calcCountryId) || countries[0];
+  const selectedCalcCountry = activeCalcCountries.find(c => c.id === calcCountryId) || activeCalcCountries[0];
   const calculatedShares = calcAmount > 0 && selectedCalcCountry 
     ? calcAmount / selectedCalcCountry.currentPrice 
     : 0;
@@ -345,7 +346,7 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
                     onChange={(e) => setCalcCountryId(e.target.value)}
                     className="w-full bg-[#171d2b] border border-[#2e374d] rounded-lg text-xs text-white p-3 focus:outline-none focus:border-[#d4af37]"
                   >
-                    {countries.map((c) => (
+                    {activeCalcCountries.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.flag} {c.name} (${c.currentPrice.toFixed(2)} / Share)
                       </option>
@@ -419,7 +420,7 @@ export default function MarketSection({ countries, onBuyShares, presetActiveTab,
                 onClick={() => onBuyShares(selectedCalcCountry)}
                 className="w-full py-3 bg-gradient-to-r from-[#d4af37] via-[#f4e8cb] to-[#c5a02e] hover:brightness-110 active:scale-98 text-black font-extrabold font-display rounded-lg text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg"
               >
-                Instantly Allocate
+                Invest Instantly
               </button>
 
             </div>

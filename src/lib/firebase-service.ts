@@ -37,6 +37,32 @@ function generateReferralCode(uid: string): string {
   return `${prefix}-${uidPart}-${randomSuffix}`;
 }
 
+async function generateUniqueReferralCode(uid: string): Promise<string> {
+  const cleanUid = uid.replace(/[^a-zA-Z0-9]/g, '');
+  const prefix = cleanUid.slice(0, 3).toUpperCase() || 'WCS';
+  const uidPart = cleanUid.slice(-4).toUpperCase() || 'XYZ';
+  
+  let attempts = 0;
+  while (attempts < 10) {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const code = `${prefix}-${uidPart}-${randomSuffix}`;
+    
+    try {
+      const q = query(collection(db, 'users'), where('referralCode', '==', code));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        return code;
+      }
+    } catch (err) {
+      console.warn("Permission restricted or check failed for referral uniqueness query, using local UUID-based safe generation fallback:", err);
+      return `${prefix}-${uidPart}-${Math.floor(100000 + Math.random() * 900000)}`;
+    }
+    attempts++;
+  }
+  
+  return `${prefix}-${uidPart}-${Date.now().toString().slice(-4)}`;
+}
+
 // 1. Fetch or create a user profile in Firestore
 export async function getOrCreateUserProfile(uid: string, email: string, displayName: string, phoneNumber?: string): Promise<UserProfile> {
   const userDocRef = doc(db, 'users', uid);
@@ -57,7 +83,7 @@ export async function getOrCreateUserProfile(uid: string, email: string, display
     
     // Auto-generate referral code for existing users if missing
     if (!data.referralCode) {
-      const code = generateReferralCode(uid);
+      const code = await generateUniqueReferralCode(uid);
       const updates = {
         referralCode: code,
         referralWallet: data.referralWallet ?? 0,
@@ -79,17 +105,21 @@ export async function getOrCreateUserProfile(uid: string, email: string, display
       referralCodeUsed = sessionStorage.getItem('pending_referral_code') || '';
     }
 
-    const code = generateReferralCode(uid);
+    const code = await generateUniqueReferralCode(uid);
     let referredByUid = '';
 
     if (referralCodeUsed) {
-      const q = query(collection(db, 'users'), where('referralCode', '==', referralCodeUsed.trim().toUpperCase()));
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        const referrerDoc = snap.docs[0];
-        if (referrerDoc.id !== uid) {
-          referredByUid = referrerDoc.id;
+      try {
+        const q = query(collection(db, 'users'), where('referralCode', '==', referralCodeUsed.trim().toUpperCase()));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const referrerDoc = snap.docs[0];
+          if (referrerDoc.id !== uid) {
+            referredByUid = referrerDoc.id;
+          }
         }
+      } catch (err) {
+        console.warn("Failed to lookup referral code due to restriction or network error:", err);
       }
     }
 

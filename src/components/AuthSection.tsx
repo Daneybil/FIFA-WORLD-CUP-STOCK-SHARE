@@ -258,11 +258,11 @@ export default function AuthSection({ onAuthSuccess, defaultIsSignUp = false }: 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="max-w-md mx-auto my-12 px-4 font-sans select-none"
+      className="max-w-md mx-auto my-4 sm:my-12 px-4 font-sans"
     >
       
       {/* Decorative Golden Ring Emblem with fine outer glow */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-6">
         <motion.div 
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.98 }}
@@ -273,7 +273,7 @@ export default function AuthSection({ onAuthSuccess, defaultIsSignUp = false }: 
       </div>
 
       {/* Main Glassmorphic Panel Card Container */}
-      <div className="bg-[#101420]/95 border border-[#1f2538] p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
+      <div className="bg-[#101420]/95 border border-[#1f2538] p-5 sm:p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
         
         {/* Abstract Corner Light Accent */}
         <div className="absolute top-0 right-0 w-36 h-36 bg-[#d4af37]/5 blur-3xl rounded-full pointer-events-none" />
